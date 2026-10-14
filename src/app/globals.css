@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  /* Nourish Spoon palette — warm cream, deep botanical green, muted gold */
+  --color-cream: #f8f4e8;
+  --color-cream-deep: #f1ead6;
+  --color-cream-dark: #e9dfc4;
+  --color-card: #fffdf7;
+  --color-line: #e7ddc2;
+  --color-line-soft: #efe8d2;
+
+  --color-pine-950: #122619;
+  --color-pine-900: #1b3a28;
+  --color-pine-800: #24492f;
+  --color-pine-700: #2f5c3d;
+  --color-pine-600: #3d734d;
+  --color-pine-100: #e3ecdf;
+  --color-pine-50: #f0f5ec;
+
+  --color-gold-700: #8f6b1f;
+  --color-gold-600: #b08a2e;
+  --color-gold-500: #c9a227;
+  --color-gold-soft: #f4e9c8;
+  --color-gold-pale: #faf3dd;
+
+  --color-ink: #2c2a21;
+  --color-ink-soft: #57523f;
+  --color-muted: #8d8670;
+
+  --font-display: "Playfair Display", "Georgia", serif;
+  --font-sans: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  --font-script: "Pinyon Script", cursive;
+
+  --shadow-card: 0 1px 2px rgba(60, 50, 20, 0.05), 0 6px 18px -8px rgba(60, 50, 20, 0.12);
+  --shadow-pop: 0 12px 40px -12px rgba(30, 40, 25, 0.25);
+
+  --radius-card: 14px;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* thin elegant scrollbars for the admin chrome */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: #d8cba4;
+  border-radius: 8px;
+  border: 2px solid var(--color-cream);
+}
+*::-webkit-scrollbar-thumb:hover { background: #c3b384; }
+
+/* number tabular for KPI + table figures */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

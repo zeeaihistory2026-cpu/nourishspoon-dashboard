@@ -8,7 +8,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <Shell admin={{ name: "Ayesha Khan", email: "dev@localhost" }}>{children}</Shell>;
   }
 
-  const session = await getSession();
+  // Never let a session-check failure become a 500: log it and fall through
+  // to the login redirect, which is the correct unauthenticated behaviour.
+  let session: Awaited<ReturnType<typeof getSession>> = null;
+  try {
+    session = await getSession();
+  } catch (err) {
+    console.error("[admin layout] session check failed, redirecting to login:", err);
+  }
   if (!session) redirect("/login");
 
   const email = (session.email ?? "") as string;

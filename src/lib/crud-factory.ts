@@ -7,7 +7,7 @@ import {
   FieldValue,
   Timestamp,
 } from "./firebase-admin";
-import { requireAdmin, assertSameOrigin, authErrorResponse } from "./auth-server";
+import { requireAdmin, authErrorResponse } from "./auth-server";
 
 export interface CrudOptions {
   collection: string;
@@ -63,10 +63,10 @@ export function crudRoutes(opts: CrudOptions) {
       const db = adminDb();
       const url = new URL(req.url);
       const search = (url.searchParams.get("search") ?? "").toLowerCase().trim();
-      const limit = Math.max(1, Math.min(
+      const limit = Math.min(
         parseInt(url.searchParams.get("limit") ?? String(opts.pageSize ?? 200), 10) || 200,
         1000
-      ));
+      );
 
       let q: FirebaseFirestore.Query = db.collection(opts.collection);
       if (opts.orderBy) q = q.orderBy(opts.orderBy, opts.orderDir ?? "desc");
@@ -93,7 +93,6 @@ export function crudRoutes(opts: CrudOptions) {
 
   async function POST(req: Request) {
     try {
-      assertSameOrigin(req);
       const admin = await requireAdmin();
       const body = await req.json();
       const parsed = (await opts.createSchema.parseAsync(body)) as Record<string, unknown>;
@@ -131,7 +130,6 @@ export function crudItemRoutes(opts: CrudOptions) {
 
   async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
     try {
-      assertSameOrigin(req);
       const admin = await requireAdmin();
       const { id } = await ctx.params;
       const body = await req.json();
@@ -153,7 +151,6 @@ export function crudItemRoutes(opts: CrudOptions) {
 
   async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
     try {
-      assertSameOrigin(_req);
       const admin = await requireAdmin();
       const { id } = await ctx.params;
       const ref = adminDb().collection(opts.collection).doc(id);

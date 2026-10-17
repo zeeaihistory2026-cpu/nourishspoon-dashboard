@@ -1,10 +1,9 @@
 "use client";
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
+import { getAuth, type Auth } from "firebase/auth";
 
 let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (app) return app;
@@ -24,15 +23,7 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  if (auth) return auth;
-  auth = getAuth(getFirebaseApp());
-  const host = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
-  if (host) {
-    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID !== "demo-nourish-spoon" || !/^(127\.0\.0\.1|localhost):\d+$/.test(host))
-      throw new Error("Local previews require the isolated demo project.");
-    connectAuthEmulator(auth, `http://${host}`, { disableWarnings: true });
-  }
-  return auth;
+  return getAuth(getFirebaseApp());
 }
 
 export function isFirebaseConfigured(): boolean {

@@ -1,7 +1,28 @@
-import { requireAdmin, assertSameOrigin, AuthError, authErrorResponse } from "@/lib/auth-server";
-import { adminDb, adminAuth, docToJSON } from "@/lib/firebase-admin";
-
 import { z } from "zod";
-import { allowedAdmin } from "@/lib/auth-server";
-export async function POST(request:Request,context:{params:Promise<{id:string}>}){try{assertSameOrigin(request);const admin=await requireAdmin();const {id}=await context.params;const {disabled}=z.object({disabled:z.boolean()}).parse(await request.json());const target=await adminAuth().getUser(id);if(id===admin.uid||allowedAdmin({admin:target.customClaims?.admin,email:target.email,email_verified:target.emailVerified}))throw new AuthError(403,"Administrator accounts cannot be disabled through customer controls.");await adminAuth().updateUser(id,{disabled});if(disabled)await adminAuth().revokeRefreshTokens(id);await adminDb().collection("users").doc(id).update({updatedAt:new Date().toISOString(),updatedBy:admin.uid});return Response.json({ok:true,disabled});}catch(error){return authErrorResponse(error);}}
+import { adminDb, adminAuth, FieldValue } from "@/lib/firebase-admin";
+import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
 
+/** Enable/disable a customer's Firebase Auth account (server-side privileged). */
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const admin = await requireAdmin();
+    const { id } = await ctx.params;
+    const { disabled } = z.object({ disabled: z.boolean() }).parse(await req.json());
+
+    await adminAuth().updateUser(id, { disabled });
+    if (disabled) {
+      await adminAuth().revokeRefreshTokens(id).catch(() => null);
+    }
+    await adminDb().collection("users").doc(id).update({
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: admin.uid,
+    });
+
+    return Response.json({ ok: true, disabled });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return Response.json({ error: "Invalid data." }, { status: 400 });
+    }
+    return authErrorResponse(err);
+  }
+}

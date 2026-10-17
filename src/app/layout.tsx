@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Playfair_Display, Nunito_Sans, Pinyon_Script } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { theme } from "@/lib/theme";
 import "./globals.css";
 
-const playfair = localFont({
-  src: "../fonts/playfairdisplay/PlayfairDisplay[wght].ttf",
-  weight: "400 900",
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
   variable: "--font-display",
   display: "swap",
 });
 
-const nunito = localFont({
-  src: "../fonts/nunitosans/NunitoSans[YTLC,opsz,wdth,wght].ttf",
-  weight: "200 1000",
+const nunito = Nunito_Sans({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const pinyon = localFont({
-  src: "../fonts/pinyonscript/PinyonScript-Regular.ttf",
-  weight: "400",
+const pinyon = Pinyon_Script({
+  subsets: ["latin"],
+  weight: ["400"],
   variable: "--font-script",
   display: "swap",
 });

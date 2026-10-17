@@ -206,7 +206,7 @@ function Page() {
       <DataTable columns={columns} rows={rows} loading={loading} emptyText="No notifications yet." />
 
       <Dialog open={drawerOpen} onClose={() => setDrawerOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontFamily: 'var(--font-display)' }}>
+        <DialogTitle sx={{ fontFamily: '"Playfair Display", Georgia, serif' }}>
           {editing ? "Edit notification" : "New notification"}
         </DialogTitle>
         <DialogContent className="flex flex-col gap-4" sx={{ pt: 1 }}>

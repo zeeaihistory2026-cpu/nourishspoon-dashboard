@@ -57,7 +57,7 @@ function PhonePreview({ content, products }: { content: HomeContent; products: P
           <Box component="img" src={content.hero.imageUrl} alt="" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
         )}
         <Box sx={{ position: "absolute", inset: 0, p: 2.5, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "linear-gradient(transparent 40%, rgba(27,58,40,0.55))" }}>
-          <Typography sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: "#fff", fontSize: 18, lineHeight: 1.25 }}>
+          <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, color: "#fff", fontSize: 18, lineHeight: 1.25 }}>
             {content.hero.heading || "Hero heading"}
           </Typography>
           {content.hero.ctaLabel && (
@@ -199,7 +199,7 @@ function Page() {
       <Box className="grid gap-5" sx={{ gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
         <Box className="flex flex-col gap-5">
           <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 2 }}>
+            <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 2 }}>
               Hero Banner
             </Typography>
             <Box className="flex flex-col gap-3">
@@ -219,7 +219,7 @@ function Page() {
 
           <Card sx={{ p: 3 }}>
             <Box className="flex items-center justify-between mb-2">
-              <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+              <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
                 Product Tabs
               </Typography>
             </Box>
@@ -247,7 +247,7 @@ function Page() {
           </Card>
 
           <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
+            <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>
               Section Order
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
@@ -271,7 +271,7 @@ function Page() {
         <Box>
           <Card sx={{ p: 3 }}>
             <Box className="flex items-center justify-between mb-2">
-              <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+              <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
                 Best Sellers
               </Typography>
               <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setPickerOpen(true)}>
@@ -312,7 +312,7 @@ function Page() {
 
       <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} maxWidth="sm" fullWidth>
         <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 2 }}>
+          <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 2 }}>
             Choose best sellers
           </Typography>
           <Box className="flex flex-col gap-1" sx={{ maxHeight: 420, overflowY: "auto" }}>

@@ -42,6 +42,7 @@ import FavoriteBorderOutlined from "@mui/icons-material/FavoriteBorderOutlined";
 import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SearchIcon from "@mui/icons-material/SearchOutlined";
 import MenuIcon from "@mui/icons-material/MenuOutlined";
+import MenuOpenIcon from "@mui/icons-material/MenuOpenOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import PhoneIphoneOutlined from "@mui/icons-material/PhoneIphoneOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMoreOutlined";
@@ -73,6 +74,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode }[] = [
 ];
 
 const SIDEBAR_W = 232;
+const SIDEBAR_COLLAPSED_W = 72;
 
 function LeafSprig() {
   return (
@@ -96,31 +98,33 @@ function LeafSprig() {
   );
 }
 
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarBody({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   return (
-    <Box className="h-full flex flex-col" sx={{ background: "#f6f1e1" }}>
-      <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}>
+    <Box className="h-full flex flex-col" sx={{ background: "#f6f1e1", overflow: "hidden" }}>
+      <Box sx={{ px: collapsed ? 1 : 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}>
         <Box
           component="img"
           src="/assets/brand/logo.png"
           alt="Nourish Spoon"
-          sx={{ width: 132, mx: "auto", display: "block" }}
+          sx={{ width: collapsed ? 46 : 132, mx: "auto", display: "block" }}
         />
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-script)',
-            color: "#b08a2e",
-            fontSize: 17,
-            mt: 0.5,
-            lineHeight: 1,
-          }}
-        >
-          Crafted with Love
-        </Typography>
+        {!collapsed && (
+          <Typography
+            sx={{
+              fontFamily: '"Pinyon Script", cursive',
+              color: "#b08a2e",
+              fontSize: 17,
+              mt: 0.5,
+              lineHeight: 1,
+            }}
+          >
+            Crafted with Love
+          </Typography>
+        )}
       </Box>
 
-      <Box className="flex-1 overflow-y-auto" sx={{ px: 1.5, pb: 2 }}>
+      <Box className="flex-1 overflow-y-auto" sx={{ px: collapsed ? 1 : 1.5, pb: 2 }}>
         <List disablePadding>
           {NAV.map((item) => {
             const active =
@@ -131,11 +135,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 component={Link}
                 href={item.href}
                 onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
                 sx={{
                   borderRadius: 2,
                   mb: 0.4,
                   py: 1,
-                  px: 1.8,
+                  px: collapsed ? 0 : 1.8,
+                  justifyContent: collapsed ? "center" : "flex-start",
                   color: active ? "#fffdf7" : "#3d3a2c",
                   backgroundColor: active ? "#1b3a28" : "transparent",
                   "&:hover": {
@@ -145,42 +151,46 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 34,
+                    minWidth: collapsed ? 0 : 34,
                     color: active ? "#fffdf7" : "#57523f",
                     "& svg": { fontSize: 20 },
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active ? 700 : 600 } } }}
-                />
+                {!collapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active ? 700 : 600 } } }}
+                  />
+                )}
               </ListItemButton>
             );
           })}
         </List>
       </Box>
 
-      <Box sx={{ px: 2, pb: 2, position: "relative" }}>
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-script)',
-            color: "#b08a2e",
-            fontSize: 21,
-            lineHeight: 1.25,
-          }}
-        >
-          Real
-          <br />
-          Ingredients
-          <br />
-          Real Nutrition
-        </Typography>
-        <Box sx={{ position: "absolute", right: 6, bottom: -6, opacity: 0.9 }}>
-          <LeafSprig />
+      {!collapsed && (
+        <Box sx={{ px: 2, pb: 2, position: "relative" }}>
+          <Typography
+            sx={{
+              fontFamily: '"Pinyon Script", cursive',
+              color: "#b08a2e",
+              fontSize: 21,
+              lineHeight: 1.25,
+            }}
+          >
+            Real
+            <br />
+            Ingredients
+            <br />
+            Real Nutrition
+          </Typography>
+          <Box sx={{ position: "absolute", right: 6, bottom: -6, opacity: 0.9 }}>
+            <LeafSprig />
+          </Box>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }
@@ -196,6 +206,7 @@ export default function Shell({
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width:1100px)");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [query, setQuery] = useState("");
 
@@ -230,15 +241,16 @@ export default function Shell({
       {isDesktop ? (
         <Box
           sx={{
-            width: SIDEBAR_W,
+            width: collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W,
             flexShrink: 0,
             position: "sticky",
             top: 0,
             height: "100vh",
             borderRight: "1px solid #e7ddc2",
+            transition: "width 0.25s ease",
           }}
         >
-          <SidebarBody />
+          <SidebarBody collapsed={collapsed} />
         </Box>
       ) : (
         <Drawer
@@ -264,11 +276,16 @@ export default function Shell({
           }}
         >
           <Toolbar sx={{ gap: 2, py: 1, px: { xs: 2, md: 3 } }}>
-            {!isDesktop && (
-              <IconButton onClick={() => setMobileOpen(true)} aria-label="Open menu">
-                <MenuIcon />
-              </IconButton>
-            )}
+            <IconButton
+              onClick={() => {
+                if (isDesktop) setCollapsed((c) => !c);
+                else setMobileOpen(true);
+              }}
+              aria-label={isDesktop ? (collapsed ? "Expand sidebar" : "Collapse sidebar") : "Open menu"}
+              sx={{ border: "1px solid #e7ddc2", backgroundColor: "#fffdf7" }}
+            >
+              {isDesktop && !collapsed ? <MenuOpenIcon /> : <MenuIcon />}
+            </IconButton>
             <Box component="form" onSubmit={submitSearch} sx={{ flex: 1, maxWidth: 560 }}>
               <TextField
                 fullWidth

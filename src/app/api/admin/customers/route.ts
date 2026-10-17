@@ -1,6 +1,38 @@
-import { requireAdmin, assertSameOrigin, AuthError, authErrorResponse } from "@/lib/auth-server";
-import { adminDb, adminAuth, docToJSON } from "@/lib/firebase-admin";
+import { adminDb, docToJSON } from "@/lib/firebase-admin";
+import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
 
-import { customerView,boundedLimit,newest } from "@/lib/contracts";
-export async function GET(request:Request){try{await requireAdmin();const params=new URL(request.url).searchParams;const db=adminDb();const snapshot=await db.collection("users").limit(boundedLimit(params.get("limit"))).get();const wallets=snapshot.empty?[]:await db.getAll(...snapshot.docs.map(doc=>db.collection("rewardWallets").doc(doc.id)));const balances=new Map(wallets.map(doc=>[doc.id,doc.data()]));let items=snapshot.docs.map(doc=>customerView(doc.id,doc.data(),balances.get(doc.id))).sort(newest);const search=(params.get("search")||"").trim().toLowerCase();if(search)items=items.filter(item=>[item.fullName,item.email,item.phone,item.uid].join(" ").toLowerCase().includes(search));const disabled=new Map<string,boolean>();for(let offset=0;offset<items.length;offset+=100){const accounts=await adminAuth().getUsers(items.slice(offset,offset+100).map(item=>({uid:item.id})));accounts.users.forEach(user=>disabled.set(user.uid,user.disabled));}return Response.json({items:items.map(item=>({...item,disabled:disabled.get(item.id)??false})),total:items.length});}catch(error){return authErrorResponse(error);}}
+export async function GET(req: Request) {
+  try {
+    await requireAdmin();
+    const url = new URL(req.url);
+    const search = (url.searchParams.get("search") ?? "").toLowerCase().trim();
+    const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 1000);
 
+    const snap = await adminDb().collection("users").orderBy("createdAt", "desc").limit(limit).get();
+    let items = snap.docs.map((d) => docToJSON(d)).filter(Boolean) as Record<string, unknown>[];
+    if (search) {
+      items = items.filter((u) =>
+        [u.fullName, u.email, u.phone, u.uid, u.id]
+          .map((v) => String(v ?? "").toLowerCase())
+          .some((v) => v.includes(search))
+      );
+    }
+
+    // Attach Auth disabled state (batch).
+    const auth = (await import("@/lib/firebase-admin")).adminAuth();
+    await Promise.all(
+      items.slice(0, 100).map(async (u) => {
+        try {
+          const rec = await auth.getUser(u.uid as string);
+          u.disabled = rec.disabled;
+        } catch {
+          u.disabled = false;
+        }
+      })
+    );
+
+    return Response.json({ items, total: items.length });
+  } catch (err) {
+    return authErrorResponse(err);
+  }
+}

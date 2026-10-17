@@ -34,7 +34,7 @@ export interface Product {
   compareAtPrice?: number;
   variants: ProductVariant[];
   weight: string;
-  stock: number | null;
+  stock: number;
   images: string[];
   ingredients: Ingredient[];
   benefits: ProductBenefit[];
@@ -59,9 +59,8 @@ export interface Category {
 }
 
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "preparing"
+  | "placed"
+  | "packed"
   | "out_for_delivery"
   | "delivered"
   | "cancelled";
@@ -84,14 +83,11 @@ export interface Order {
   customerPhone?: string;
   items: OrderItem[];
   subtotal: number;
-  deliveryFee: number | null;
-  deliveryMethod: string;
-  trackingNumber: string;
-  quotePending: boolean;
+  deliveryFee: number;
   discount?: number;
-  total: number | null;
-  paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash";
-  paymentStatus: "awaiting_payment" | "submitted" | "paid" | "refunded";
+  total: number;
+  paymentMethod: "cod" | "bank_transfer";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   orderStatus: OrderStatus;
   shippingAddress: {
     label: string;

@@ -7,9 +7,9 @@ export async function api<T = unknown>(
   options: RequestInit = {}
 ): Promise<T> {
   const res = await fetch(path, {
-    ...options,
     credentials: "include",
     headers: { "Content-Type": "application/json", ...(options.headers ?? {}) },
+    ...options,
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -43,10 +43,7 @@ export function useApi<T>(path: string | null) {
   }, [path]);
 
   useEffect(() => {
-    setData(null);
-    setLoading(Boolean(path));
     load();
-    return () => { ++seq.current; };
   }, [load]);
 
   return { data, loading, error, refresh: load, setData };

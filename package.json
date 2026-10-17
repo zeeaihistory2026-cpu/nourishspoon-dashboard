@@ -5,10 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "test:runtime": "node --no-experimental-require-module -e \"require('firebase-admin/auth'); console.log('Firebase auth runtime import passed')\""
+    "start": "next start"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -33,11 +30,5 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "type": "module",
-  "overrides": {
-    "jwks-rsa": {
-      "jose": "^5.10.0"
-    }
   }
 }

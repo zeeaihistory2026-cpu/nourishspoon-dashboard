@@ -29,15 +29,14 @@ import type { Order, OrderEvent } from "@/lib/types";
 
 const STATUSES = [
   { value: "", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "preparing", label: "Preparing" },
+  { value: "placed", label: "Placed" },
+  { value: "packed", label: "Packed" },
   { value: "out_for_delivery", label: "Out for delivery" },
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const FLOW = ["pending", "confirmed", "preparing", "out_for_delivery", "delivered"];
+const FLOW = ["placed", "packed", "out_for_delivery", "delivered"];
 const TERMINAL_CONFIRM = new Set(["delivered", "cancelled"]);
 
 function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => void; onUpdated: () => void }) {
@@ -49,8 +48,6 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
   }>(`/api/admin/orders/${id}`);
   const [newStatus, setNewStatus] = useState("");
   const [newPayment, setNewPayment] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
-  const [trackingNumber, setTrackingNumber] = useState("");
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,10 +59,8 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
     if (order) {
       setNewStatus(order.orderStatus);
       setNewPayment(order.paymentStatus);
-      setDeliveryFee(order.deliveryFee == null ? "" : String(order.deliveryFee));
-      setTrackingNumber(order.trackingNumber || "");
     }
-  }, [order?.id, order?.updatedAt]);
+  }, [order?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save() {
     if (!order) return;
@@ -74,10 +69,7 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
     try {
       await api(`/api/admin/orders/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ orderStatus: newStatus, paymentStatus: newPayment || undefined, note: note || undefined,
-          ...(deliveryFee !== "" && Number(deliveryFee) !== order.deliveryFee ? { deliveryFee: Number(deliveryFee) } : {}),
-          ...(trackingNumber !== order.trackingNumber ? { trackingNumber } : {}),
-        }),
+        body: JSON.stringify({ orderStatus: newStatus, paymentStatus: newPayment || undefined, note: note || undefined }),
       });
       setNote("");
       setConfirming(false);
@@ -201,7 +193,7 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
           <FormControl size="small" fullWidth>
             <InputLabel>Order status</InputLabel>
             <Select value={newStatus} label="Order status" onChange={(e) => setNewStatus(e.target.value)}>
-              {[...FLOW, "cancelled"].filter(s => s === order.orderStatus || (!["delivered", "cancelled"].includes(order.orderStatus) && (s === "cancelled" || FLOW.indexOf(s) === activeStep + 1))).map((s) => (
+              {["placed", "packed", "out_for_delivery", "delivered", "cancelled"].map((s) => (
                 <MenuItem key={s} value={s} className="capitalize">{s.replace(/_/g, " ")}</MenuItem>
               ))}
             </Select>
@@ -209,18 +201,11 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
           <FormControl size="small" fullWidth>
             <InputLabel>Payment status</InputLabel>
             <Select value={newPayment} label="Payment status" onChange={(e) => setNewPayment(e.target.value)}>
-              {["awaiting_payment", "submitted", "paid", "refunded"].map((s) => (
+              {["pending", "paid", "failed", "refunded"].map((s) => (
                 <MenuItem key={s} value={s} className="capitalize">{s}</MenuItem>
               ))}
             </Select>
           </FormControl>
-        </Box>
-        <Box className="grid grid-cols-2 gap-3" sx={{ mt: 2 }}>
-          <TextField label="Delivery fee (Rs.)" size="small" type="number" value={deliveryFee}
-            disabled={order.orderStatus !== "pending"} slotProps={{ htmlInput: { min: 0, max: 10000, step: 1 } }}
-            onChange={e => setDeliveryFee(e.target.value)} helperText={order.quotePending ? "Set before confirming this order" : "Confirmed delivery charge"} />
-          <TextField label="TCS consignment number" size="small" value={trackingNumber}
-            onChange={e => setTrackingNumber(e.target.value)} helperText="Required before TCS dispatch" />
         </Box>
         <TextField
           fullWidth
@@ -235,7 +220,7 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
           <Button variant="outlined" onClick={onClose}>Close</Button>
           <Button
             variant="contained"
-            disabled={busy || (newStatus === order.orderStatus && newPayment === order.paymentStatus && !note && trackingNumber === order.trackingNumber && (deliveryFee === "" || Number(deliveryFee) === order.deliveryFee))}
+            disabled={busy || (newStatus === order.orderStatus && newPayment === order.paymentStatus && !note)}
             onClick={requestSave}
             startIcon={busy ? <CircularProgress size={16} color="inherit" /> : undefined}
           >

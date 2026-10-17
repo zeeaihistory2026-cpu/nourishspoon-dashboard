@@ -67,51 +67,11 @@ interface DashboardData {
     name: string;
     weight: string;
     price: number;
-    stock: number | null;
+    stock: number;
     isActive: boolean;
     isFeatured: boolean;
     image: string;
   }[];
-}
-
-/* ------------------------------- decorations ------------------------------- */
-
-function LeafBranch({ flip = false }: { flip?: boolean }) {
-  return (
-    <svg
-      width="150"
-      height="120"
-      viewBox="0 0 150 120"
-      fill="none"
-      aria-hidden
-      style={{ transform: flip ? "scaleX(-1)" : undefined }}
-    >
-      <path
-        d="M10 110 C 40 80, 70 60, 135 25"
-        stroke="#8fa876"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {[
-        [30, 92, -32, 26, 11],
-        [52, 76, 28, 24, 10],
-        [72, 62, -30, 26, 11],
-        [94, 48, 30, 24, 10],
-        [114, 36, -28, 22, 9],
-      ].map(([x, y, r, rx, ry], i) => (
-        <ellipse
-          key={i}
-          cx={x}
-          cy={y}
-          rx={rx}
-          ry={ry}
-          fill="#b6c79b"
-          opacity="0.9"
-          transform={`rotate(${r} ${x} ${y})`}
-        />
-      ))}
-    </svg>
-  );
 }
 
 /* --------------------------------- KPI card --------------------------------- */
@@ -152,13 +112,13 @@ function KpiCard({
           {icon}
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 13, fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
             {label}
           </Typography>
-          <Box className="flex items-baseline gap-2 flex-wrap">
+          <Box className="flex items-baseline gap-1 flex-wrap">
             <Typography
               className="tnum"
-              sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 29, lineHeight: 1.15 }}
+              sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 27, lineHeight: 1.15 }}
             >
               {value}
             </Typography>
@@ -167,10 +127,11 @@ function KpiCard({
               sx={{
                 color: up ? "#2e7d4f" : "#c0392b",
                 fontWeight: 800,
-                fontSize: 11.5,
+                fontSize: 11,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 0.3,
+                whiteSpace: "nowrap",
               }}
             >
               {up ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />}
@@ -203,7 +164,7 @@ function SectionHead({
       <Box className="flex items-baseline gap-3 flex-wrap">
         <Typography
           variant="h5"
-          sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 21 }}
+          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}
         >
           {title}
         </Typography>
@@ -326,15 +287,34 @@ export default function DashboardPage() {
           border: "1px solid #e7ddc2",
         }}
       >
-        <Box sx={{ position: "absolute", left: -8, bottom: -10, opacity: 0.9 }}>
-          <LeafBranch />
-        </Box>
+        <Box
+          component="img"
+          src="/assets/brand/welcome-banner.jpg"
+          alt="Nourish Spoon wholesome products"
+          sx={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "right center",
+          }}
+        />
+        {/* Soft cream fade so the heading sits on a clean area, like the design */}
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(90deg, #fbf6e7 0%, #fbf6e7 32%, rgba(251,246,231,0.85) 45%, rgba(251,246,231,0) 58%)",
+          }}
+        />
         <Box className="flex items-center" sx={{ position: "relative", minHeight: 232 }}>
           <Box sx={{ flex: "1 1 42%", pl: { xs: 3, md: 5 }, pr: 2, py: 4, zIndex: 1 }}>
             <Typography
               variant="h3"
               sx={{
-                fontFamily: 'var(--font-display)',
+                fontFamily: '"Playfair Display", Georgia, serif',
                 fontWeight: 700,
                 fontSize: { xs: 32, md: 44 },
                 color: "#1b3a28",
@@ -351,71 +331,11 @@ export default function DashboardPage() {
               lives with wholesome goodness.
             </Typography>
           </Box>
-          <Box
-            sx={{
-              flex: "1 1 58%",
-              alignSelf: "stretch",
-              position: "relative",
-              display: { xs: "none", sm: "block" },
-              minHeight: 232,
-            }}
-          >
-            <Box
-              component="img"
-              src="/assets/brand/bowl.jpg"
-              alt="Nourish Spoon wholesome products"
-              sx={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center 65%",
-                WebkitMaskImage:
-                  "linear-gradient(90deg, transparent 0, #000 20%, #000 82%, transparent 100%)",
-                maskImage:
-                  "linear-gradient(90deg, transparent 0, #000 20%, #000 82%, transparent 100%)",
-              }}
-            />
-            <Box
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: 250,
-                background:
-                  "linear-gradient(90deg, rgba(251,246,231,0) 0%, rgba(251,246,231,0.92) 60%)",
-              }}
-            />
-            <Typography
-              sx={{
-                position: "absolute",
-                right: 24,
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontFamily: 'var(--font-script)',
-                color: "#b08a2e",
-                fontSize: 24,
-                lineHeight: 1.45,
-                textAlign: "center",
-                width: 150,
-              }}
-            >
-              Wholesome
-              <br />
-              Nutrition
-              <br />
-              for a Healthier
-              <br />
-              Tomorrow
-            </Typography>
-          </Box>
         </Box>
       </Card>
 
       {/* KPI cards */}
-      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", xl: "repeat(5, 1fr)" } }}>
+      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(5, 1fr)" } }}>
         <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" />
         <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" />
         <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" />
@@ -439,31 +359,32 @@ export default function DashboardPage() {
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/panjeeri.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <Box sx={{ position: "absolute", left: 10, top: 10, color: "#fffdf7", textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}>
-                  <Typography sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
+                <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(251,246,231,0.94) 0%, rgba(251,246,231,0.6) 48%, rgba(251,246,231,0) 72%)" }} />
+                <Box sx={{ position: "absolute", left: 10, top: 10, color: "#1b3a28" }}>
+                  <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
                     Traditional
                     <br />
                     Panjeeri
                   </Typography>
-                  <Typography variant="caption" sx={{ fontSize: 11 }}>from Sargodha</Typography>
+                  <Typography variant="caption" sx={{ fontSize: 11, color: "#57523f" }}>from Sargodha</Typography>
                 </Box>
               </HomeSectionCard>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/energy-balls.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box className="flex items-center justify-center gap-3 h-full" sx={{ background: "#fbf6e7" }}>
+                <Box className="flex items-center justify-center gap-1 h-full" sx={{ background: "#fbf6e7", px: 0.5 }}>
                   {[
                     { label: "Panjeeri", icon: <SpaOutlined /> },
                     { label: "Energy Balls", icon: <Inventory2Outlined /> },
                     { label: "Combos", icon: <ShoppingCartOutlined /> },
                   ].map((t) => (
-                    <Box key={t.label} className="flex flex-col items-center gap-1">
-                      <Box sx={{ width: 44, height: 44, borderRadius: "50%", background: "#f4e9c8", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", border: "1px solid #e7ddc2" }}>
+                    <Box key={t.label} className="flex flex-col items-center gap-0.5" sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ width: 34, height: 34, borderRadius: "50%", background: "#f4e9c8", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", border: "1px solid #e7ddc2", "& svg": { fontSize: 16 } }}>
                         {t.icon}
                       </Box>
-                      <Typography variant="caption" sx={{ fontSize: 10.5, fontWeight: 700, color: "#57523f" }}>{t.label}</Typography>
+                      <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: "#57523f", whiteSpace: "nowrap" }}>{t.label}</Typography>
                     </Box>
                   ))}
                 </Box>
@@ -471,7 +392,7 @@ export default function DashboardPage() {
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
                 <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(248,244,232,0.35)" }}>
-                  <Typography sx={{ fontFamily: 'var(--font-script)', color: "#1b3a28", fontSize: 19, textAlign: "center", lineHeight: 1.3 }}>
+                  <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, textAlign: "center", lineHeight: 1.3 }}>
                     Real Ingredients
                     <br />
                     Real Nutrition
@@ -517,7 +438,7 @@ export default function DashboardPage() {
                           </Box>
                         </td>
                         <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
-                        <td style={{ padding: "10px 12px" }} className="tnum">{p.stock == null ? "Not tracked" : p.stock}</td>
+                        <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
                         <td style={{ padding: "10px 12px" }}>
                           <StatusChip status={p.isActive ? "active" : "inactive"} />
                         </td>
@@ -626,7 +547,7 @@ export default function DashboardPage() {
       <Box>
         <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <Box className="flex items-baseline gap-3">
-            <Typography variant="h5" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 21 }}>
+            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
               Manage App Screens
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>

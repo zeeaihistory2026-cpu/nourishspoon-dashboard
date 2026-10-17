@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Box,
@@ -42,24 +42,18 @@ function AdjustPoints({ userId, onDone }: { userId: string; onDone: () => void }
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const adjustment = useRef<{ payload: string; id: string } | null>(null);
 
   async function submit() {
-    if (busy) return;
-    const payload = JSON.stringify({ userId, delta: Number(delta), reason: reason.trim() });
-    if (adjustment.current?.payload !== payload) adjustment.current = { payload, id: crypto.randomUUID() };
     setBusy(true);
     setError(null);
     try {
       await api("/api/admin/points/adjust", {
         method: "POST",
-        headers: { "Idempotency-Key": adjustment.current!.id },
-        body: payload,
+        body: JSON.stringify({ userId, delta: Number(delta), reason: reason.trim() }),
       });
       setOpen(false);
       setDelta("");
       setReason("");
-      adjustment.current = null;
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Adjustment failed.");
@@ -72,7 +66,7 @@ function AdjustPoints({ userId, onDone }: { userId: string; onDone: () => void }
     <>
       <Button size="small" variant="outlined" onClick={() => setOpen(true)}>Adjust points</Button>
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontFamily: 'var(--font-display)' }}>Adjust points</DialogTitle>
+        <DialogTitle sx={{ fontFamily: '"Playfair Display", Georgia, serif' }}>Adjust points</DialogTitle>
         <DialogContent className="flex flex-col gap-3" sx={{ pt: 1 }}>
           {error && <Typography variant="body2" sx={{ color: "#c0392b" }}>{error}</Typography>}
           <TextField

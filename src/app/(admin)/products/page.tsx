@@ -48,7 +48,7 @@ type FormValues = {
   compareAtPrice?: number | null;
   variants: { label: string; price?: number; compareAtPrice?: number | null }[];
   weight: string;
-  stock?: number | null;
+  stock?: number;
   images: string[];
   ingredients: { name: string; emoji?: string }[];
   benefits: { icon: string; label: string }[];
@@ -65,7 +65,7 @@ const EMPTY: FormValues = {
   price: undefined,
   variants: [],
   weight: "",
-  stock: null,
+  stock: 0,
   images: [],
   ingredients: [],
   benefits: [],
@@ -262,7 +262,7 @@ function ProductForm({
           <TextField fullWidth size="small" label="Compare-at price" type="number" slotProps={{ htmlInput: { min: 0 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
         )} />
         <Controller name="stock" control={control} render={({ field }) => (
-          <TextField fullWidth size="small" label="Stock" type="number" helperText="Leave blank if not tracked" slotProps={{ htmlInput: { min: 0, step: 1 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
+          <TextField fullWidth size="small" label="Stock" type="number" slotProps={{ htmlInput: { min: 0 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} />
         )} />
       </Box>
 
@@ -387,7 +387,7 @@ function ProductDetail({ product, onClose, onEdit }: { product: Product; onClose
         {[
           ["Price", rs(product.price)],
           ["Compare at", product.compareAtPrice ? rs(product.compareAtPrice) : "—"],
-          ["Stock", product.stock == null ? "Not tracked" : num(product.stock)],
+          ["Stock", num(product.stock)],
           ["Rating", `${product.rating ?? 0} (${product.reviewCount ?? 0})`],
           ["Updated", fmtDateTime(product.updatedAt)],
           ["ID", product.id],
@@ -451,8 +451,8 @@ function Page() {
     if (q) list = list.filter((p) => [p.name, p.categoryName, p.slug].some((v) => String(v ?? "").toLowerCase().includes(q)));
     if (category !== "all") list = list.filter((p) => p.categoryId === category);
     if (status !== "all") list = list.filter((p) => (status === "active" ? p.isActive : !p.isActive));
-    if (stock === "in") list = list.filter((p) => p.stock == null || p.stock > 0);
-    if (stock === "out") list = list.filter((p) => p.stock === 0);
+    if (stock === "in") list = list.filter((p) => (p.stock ?? 0) > 0);
+    if (stock === "out") list = list.filter((p) => (p.stock ?? 0) <= 0);
     return list;
   }, [data, search, category, status, stock]);
 
@@ -519,7 +519,7 @@ function Page() {
       compareAtPrice: p.compareAtPrice ?? null,
       variants: (p.variants ?? []).map((v) => ({ label: v.label, price: v.price, compareAtPrice: v.compareAtPrice ?? null })),
       weight: p.weight ?? "",
-      stock: p.stock,
+      stock: p.stock ?? 0,
       images: p.images ?? [],
       ingredients: (p.ingredients ?? []).map((x) => ({ name: x.name, emoji: x.emoji ?? "" })),
       benefits: (p.benefits ?? []).map((b) => ({ icon: b.icon, label: b.label })),
@@ -612,7 +612,7 @@ function Page() {
                   </td>
                   <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
                   <td style={{ padding: "10px 12px" }} className="tnum">
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: p.stock === 0 ? "#c0392b" : undefined }}>{p.stock == null ? "Not tracked" : p.stock}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: (p.stock ?? 0) <= 0 ? "#c0392b" : undefined }}>{p.stock ?? 0}</Typography>
                   </td>
                   <td style={{ padding: "10px 12px" }}><StatusChip status={p.isActive ? "active" : "inactive"} /></td>
                   <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>

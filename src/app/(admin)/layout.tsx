@@ -1,15 +1,28 @@
 import { redirect } from "next/navigation";
 import Shell from "@/components/Shell";
-import { requireAdmin, AuthError } from "@/lib/auth-server";
+import { getSession } from "@/lib/auth-server";
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  let account;
-  try { account = await requireAdmin(); }
-  catch (error) {
-    if (error instanceof AuthError) redirect("/login");
-    return <main style={{ padding: 40 }}><h1>Connect the dashboard</h1><p>The server needs Firebase Admin credentials for the same project as the mobile app.</p><a href="/login">Return to sign in</a></main>;
+  // Local UI development bypass — never active in production builds.
+  if (process.env.NODE_ENV !== "production" && process.env.DEV_BYPASS_AUTH === "1") {
+    return <Shell admin={{ name: "Ayesha Khan", email: "dev@localhost" }}>{children}</Shell>;
   }
-  const email = account.email ?? "";
-  const name = (typeof account.name === "string" ? account.name.trim() : "") || email.split("@")[0] || "Administrator";
+
+  // Never let a session-check failure become a 500: log it and fall through
+  // to the login redirect, which is the correct unauthenticated behaviour.
+  let session: Awaited<ReturnType<typeof getSession>> = null;
+  try {
+    session = await getSession();
+  } catch (err) {
+    console.error("[admin layout] session check failed, redirecting to login:", err);
+  }
+  if (!session) redirect("/login");
+
+  const email = (session.email ?? "") as string;
+  const name =
+    ((session.name as string | undefined) ?? "").trim() ||
+    email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ||
+    "Admin";
+
   return <Shell admin={{ name, email }}>{children}</Shell>;
 }
-

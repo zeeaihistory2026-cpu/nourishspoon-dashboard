@@ -1,9 +1,30 @@
-import { requireAdmin, assertSameOrigin, AuthError, authErrorResponse } from "@/lib/auth-server";
-import { adminDb, docToJSON } from "@/lib/firebase-admin";
+import { crudItemRoutes } from "@/lib/crud-factory";
+import { productSchema } from "@/lib/schemas";
+import { slugify } from "@/lib/format";
 
-import { productUpdateSchema } from "@/lib/schemas";
-import { productView,productWrite } from "@/lib/contracts";
-export async function GET(_request:Request,context:{params:Promise<{id:string}>}){try{await requireAdmin();const {id}=await context.params;const snapshot=await adminDb().collection("products").doc(id).get();if(!snapshot.exists)throw new AuthError(404,"Product not found.");return Response.json({item:productView(id,snapshot.data()!)});}catch(error){return authErrorResponse(error);}}
-export async function PATCH(request:Request,context:{params:Promise<{id:string}>}){try{assertSameOrigin(request);const admin=await requireAdmin();const {id}=await context.params;const input=productUpdateSchema.parse(await request.json());const db=adminDb();const reference=db.collection("products").doc(id);const item=await db.runTransaction(async transaction=>{const snapshot=await transaction.get(reference);if(!snapshot.exists)throw new AuthError(404,"Product not found.");const patch={...productWrite(id,input,snapshot.data()!),updated_at:new Date().toISOString(),updated_by:admin.uid};transaction.update(reference,patch);return productView(id,{...snapshot.data(),...patch});});return Response.json({item});}catch(error){return authErrorResponse(error);}}
-export async function DELETE(request:Request,context:{params:Promise<{id:string}>}){try{assertSameOrigin(request);const admin=await requireAdmin();const {id}=await context.params;const reference=adminDb().collection("products").doc(id);await reference.update({active:false,isActive:false,deletedAt:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:admin.uid});return Response.json({ok:true});}catch(error){return authErrorResponse(error);}}
+const { GET, PATCH, DELETE } = crudItemRoutes({
+  collection: "products",
+  createSchema: productSchema,
+  updateSchema: productSchema.partial(),
+  // Soft delete: historical order lines keep their snapshots; product is hidden.
+  softDelete: true,
+  beforeCreate: undefined,
+});
 
+// Keep slug in sync when the name changes via PATCH
+async function PATCHwithSlug(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const body = await req.json().catch(() => ({}));
+  const wrapped = new Request(req.url, {
+    method: "PATCH",
+    headers: req.headers,
+    body: JSON.stringify(
+      body && typeof body.name === "string" && !body.slug
+        ? { ...body, slug: slugify(body.name) }
+        : body
+    ),
+  });
+  return PATCH(wrapped, ctx);
+}
+
+export { GET, DELETE };
+export { PATCHwithSlug as PATCH };

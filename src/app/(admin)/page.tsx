@@ -215,7 +215,8 @@ function HomeSectionCard({
         sx={{
           borderRadius: 2,
           overflow: "hidden",
-          height: 118,
+          aspectRatio: "2.9 / 1",
+          width: "100%",
           position: "relative",
           background: "#f4e9c8",
           border: "1px solid #ece4cb",
@@ -297,24 +298,25 @@ export default function DashboardPage() {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "center 45%",
-          }}
-        />
-        {/* Soft cream fade so the heading sits on a clean area, like the design.
-            On phones the fade stays strong across the whole banner so the heading
-            never collides with the jar artwork or script. */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: {
-              xs: "linear-gradient(90deg, #fbf6e7 0%, rgba(251,246,231,0.94) 55%, rgba(251,246,231,0.55) 100%)",
-              md: "linear-gradient(90deg, #fbf6e7 0%, #fbf6e7 32%, rgba(251,246,231,0.85) 45%, rgba(251,246,231,0) 58%)",
-            },
+            objectPosition: "center 42%",
           }}
         />
         <Box className="flex items-center" sx={{ position: "relative", minHeight: 232 }}>
-          <Box sx={{ flex: "1 1 42%", pl: { xs: 3, md: 5 }, pr: 2, py: 4, zIndex: 1 }}>
+          <Box
+            sx={{
+              ml: { xs: 3, md: 5 },
+              mr: 2,
+              my: 4,
+              px: { xs: 2.5, md: 3.5 },
+              py: { xs: 2.5, md: 3 },
+              borderRadius: 3,
+              maxWidth: 520,
+              background: "rgba(251, 246, 231, 0.55)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255, 255, 255, 0.65)",
+            }}
+          >
             <Typography
               variant="h3"
               sx={{
@@ -329,7 +331,7 @@ export default function DashboardPage() {
             </Typography>
             <Typography
               variant="body1"
-              sx={{ color: "#57523f", mt: 1.2, maxWidth: 460, fontSize: 15, lineHeight: 1.55 }}
+              sx={{ color: "#57523f", mt: 1.2, fontSize: 15, lineHeight: 1.55 }}
             >
               Manage your products, orders, and app content for Nourish Spoon. Keep nourishing
               lives with wholesome goodness.
@@ -363,7 +365,7 @@ export default function DashboardPage() {
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", "@media (min-width:1660px)": "repeat(4, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(251,246,231,0.94) 0%, rgba(251,246,231,0.6) 48%, rgba(251,246,231,0) 72%)" }} />
                 <Box sx={{ position: "absolute", left: 10, top: 10, color: "#1b3a28" }}>
                   <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
@@ -375,7 +377,7 @@ export default function DashboardPage() {
                 </Box>
               </HomeSectionCard>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/energy-balls.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <Box component="img" src="/assets/brand/energy-balls.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box className="flex items-center justify-center gap-1 h-full" sx={{ background: "#fbf6e7", px: 0.5 }}>
@@ -394,7 +396,7 @@ export default function DashboardPage() {
                 </Box>
               </HomeSectionCard>
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
-                <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(251,246,231,0.92) 0%, rgba(251,246,231,0.55) 42%, rgba(251,246,231,0) 68%)" }} />
                 <Box sx={{ position: "absolute", left: 10, bottom: 8 }}>
                   <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, lineHeight: 1.15 }}>

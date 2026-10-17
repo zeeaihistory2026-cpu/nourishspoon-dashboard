@@ -83,7 +83,7 @@ function MultiImage({ value, onChange }: { value: string[]; onChange: (v: string
       <Box className="flex flex-wrap gap-2">
         {value.map((url, i) => (
           <Box key={url + i} sx={{ position: "relative", width: 92, height: 92 }}>
-            <Box component="img" src={url} alt="" sx={{ width: 92, height: 92, objectFit: "cover", borderRadius: 2, border: "1px solid #e7ddc2" }} />
+            <Box component="img" src={url} alt="" sx={{ width: 92, height: 92, objectFit: "contain", borderRadius: 2, border: "1px solid #e7ddc2", background: "#f8f4e8" }} />
             {i === 0 && (
               <Chip label="Main" size="small" sx={{ position: "absolute", bottom: 4, left: 4, height: 20, fontSize: 10, background: "#1b3a28", color: "#fff" }} />
             )}

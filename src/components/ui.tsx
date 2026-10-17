@@ -396,10 +396,10 @@ export function Thumb({ src, alt, size = 44 }: { src?: string; alt: string; size
         width: size,
         height: size,
         borderRadius: 2,
-        objectFit: "cover",
+        objectFit: "contain",
         flexShrink: 0,
         border: "1px solid #ece4cb",
-        background: "#fff",
+        background: "#f8f4e8",
       }}
     />
   );

@@ -75,7 +75,7 @@ export function ImageUpload({
       </Typography>
       {value ? (
         <Box sx={{ position: "relative", width: "100%", borderRadius: 2, overflow: "hidden", border: "1px solid #e7ddc2" }}>
-          <Box component="img" src={value} alt={label} sx={{ width: "100%", height: 170, objectFit: "cover", display: "block" }} />
+          <Box component="img" src={value} alt={label} sx={{ width: "100%", height: 170, objectFit: "contain", display: "block", background: "#f8f4e8" }} />
           <Button
             size="small"
             variant="contained"

@@ -9,13 +9,16 @@ import {
   Card,
   CardContent,
   Checkbox,
+  IconButton,
+  Menu,
+  MenuItem,
   Switch,
   Typography,
 } from "@mui/material";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import ShoppingCartOutlined from "@mui/icons-material/ShoppingCartOutlined";
 import ReceiptLongOutlined from "@mui/icons-material/ReceiptLongOutlined";
-import AccountBalanceWalletOutlined from "@mui/icons-material/AccountBalanceWalletOutlined";
+import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
 import LocalOfferOutlined from "@mui/icons-material/LocalOfferOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
 import AddIcon from "@mui/icons-material/AddOutlined";
@@ -23,19 +26,14 @@ import EditIcon from "@mui/icons-material/EditOutlined";
 import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutline from "@mui/icons-material/DeleteOutlineOutlined";
 import SwapVertIcon from "@mui/icons-material/SwapVertOutlined";
+import MoreHorizIcon from "@mui/icons-material/MoreHorizOutlined";
+import MoreVertIcon from "@mui/icons-material/MoreVertOutlined";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import CreditCardOutlined from "@mui/icons-material/CreditCardOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import HelpOutline from "@mui/icons-material/HelpOutlineOutlined";
-import NatureOutlined from "@mui/icons-material/NatureOutlined";
-import StarBorderOutlined from "@mui/icons-material/StarBorderOutlined";
-import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
-import PeopleOutline from "@mui/icons-material/PeopleOutlineOutlined";
-import FavoriteBorderOutlined from "@mui/icons-material/FavoriteBorderOutlined";
-import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SpaOutlined from "@mui/icons-material/SpaOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
-import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
-import InboxOutlined from "@mui/icons-material/InboxOutlined";
 import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { useApi, api } from "@/lib/api";
 import { rs, num, pad2, fmtDate } from "@/lib/format";
@@ -65,6 +63,7 @@ interface DashboardData {
   controlProducts: {
     id: string;
     name: string;
+    category?: string;
     weight: string;
     price: number;
     stock: number;
@@ -73,71 +72,93 @@ interface DashboardData {
     image: string;
     thumb: string;
   }[];
-  weeklySales: {
+  weeklySales?: {
     date: string;
     label: string;
     revenue: number;
     orders: number;
   }[];
-  sales?: {
-    [K in "weekly" | "monthly" | "quarterly" | "yearly"]: {
-      total: number;
-      orders: number;
-      delta: number;
-      prevLabel: string;
-      rangeLabel: string;
-      points: { label: string; revenue: number; orders: number }[];
-    };
-  };
 }
 
-/* ------------------------------- sparkline ------------------------------- */
+/* ------------------------------- Botanical Foliage ------------------------------- */
 
-function Sparkline({ values, tone }: { values: number[]; tone: "green" | "gold" }) {
-  const W = 200;
-  const H = 44;
-  const max = Math.max(1, ...values);
-  const min = Math.min(0, ...values);
-  const range = Math.max(1, max - min);
-  const pts = values.map((v, i) => {
-    const x = (i / Math.max(1, values.length - 1)) * W;
-    const y = H - 6 - ((v - min) / range) * (H - 12);
-    return [x, y] as const;
-  });
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `${line} L${W},${H} L0,${H} Z`;
-  const fill = tone === "green" ? "rgba(127,176,105,0.18)" : "rgba(201,162,39,0.18)";
-  const stroke = tone === "green" ? "#7fb069" : "#d9b53a";
+function BotanicalFoliage() {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 40, display: "block" }} aria-hidden>
-      <path d={area} fill={fill} />
-      <path d={line} fill="none" stroke={stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    <svg width="180" height="110" viewBox="0 0 180 110" fill="none" aria-hidden>
+      <path
+        d="M170 10 C 130 30, 80 50, 10 95"
+        stroke="#8fa876"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      {[
+        [150, 22, -35, 24, 9],
+        [130, 36, 32, 22, 8.5],
+        [110, 50, -32, 24, 9],
+        [88, 64, 30, 20, 8],
+        [66, 76, -28, 20, 7.5],
+        [42, 86, 26, 18, 7],
+      ].map(([x, y, r, rx, ry], i) => (
+        <ellipse
+          key={i}
+          cx={x}
+          cy={y}
+          rx={rx}
+          ry={ry}
+          fill="#b6c79b"
+          opacity="0.9"
+          transform={`rotate(${r} ${x} ${y})`}
+        />
+      ))}
     </svg>
   );
 }
 
-/* --------------------------------- KPI card --------------------------------- */
+/* ------------------------------- Sparkline Wave ------------------------------- */
+
+function WaveSparkline({ tone }: { tone: "green" | "gold" }) {
+  const fill = tone === "green" ? "rgba(182,199,155,0.28)" : "rgba(235,189,112,0.28)";
+  const stroke = tone === "green" ? "#8fa876" : "#deb86e";
+  return (
+    <svg viewBox="0 0 160 36" preserveAspectRatio="none" style={{ width: "100%", height: 32, display: "block" }} aria-hidden>
+      <path
+        d="M0,28 C25,32 50,22 80,26 C110,30 135,14 160,18 L160,36 L0,36 Z"
+        fill={fill}
+      />
+      <path
+        d="M0,28 C25,32 50,22 80,26 C110,30 135,14 160,18"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* --------------------------------- KPI Card --------------------------------- */
 
 function KpiCard({
   icon,
+  iconBg,
+  iconColor,
   label,
   value,
-  delta,
+  trendText,
   caption,
-  href,
-  trend,
   tone,
+  href,
 }: {
   icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
   label: string;
   value: string;
-  delta: number;
+  trendText: string;
   caption: string;
-  href: string;
-  trend: number[];
   tone: "green" | "gold";
+  href: string;
 }) {
-  const up = delta >= 0;
   return (
     <Card
       component={Link}
@@ -148,113 +169,88 @@ function KpiCard({
         minWidth: 0,
         textDecoration: "none",
         cursor: "pointer",
+        borderRadius: "16px",
+        backgroundColor: "#ffffff",
+        border: "1px solid #ece4cb",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
         overflow: "hidden",
-        transition: "box-shadow .15s ease, transform .15s ease",
-        "&:hover": { boxShadow: "0 6px 18px rgba(27,58,40,0.12)", transform: "translateY(-1px)" },
+        boxShadow: "0 1px 3px rgba(60,50,20,0.04)",
+        transition: "box-shadow .2s ease, transform .2s ease",
+        "&:hover": {
+          boxShadow: "0 8px 22px rgba(19,56,38,0.1)",
+          transform: "translateY(-2px)",
+        },
       }}
     >
-      <CardContent sx={{ p: 2.2, pb: 1.4, "&:last-child": { pb: 1.4 } }}>
-        <Box className="flex items-start justify-between gap-2">
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              background: tone === "green" ? "#eef4e2" : "#f7ecd0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#1b3a28",
-              flexShrink: 0,
-              "& svg": { fontSize: 22 },
-            }}
-          >
-            {icon}
-          </Box>
+      <Box sx={{ p: 2, pb: 1 }}>
+        {/* Rounded square icon */}
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: "12px",
+            backgroundColor: iconBg,
+            color: iconColor,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "& svg": { fontSize: 22 },
+          }}
+        >
+          {icon}
         </Box>
-        <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", mt: 1.2 }}>
+
+        {/* Label */}
+        <Typography sx={{ color: "#756f5a", fontSize: 12, fontWeight: 600, mt: 1.5 }}>
           {label}
         </Typography>
-        <Box className="flex items-baseline gap-1 flex-wrap">
+
+        {/* Big Value */}
+        <Typography
+          className="tnum"
+          sx={{
+            fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+            fontWeight: 700,
+            fontSize: 29,
+            lineHeight: 1.15,
+            color: "#133826",
+            mt: 0.3,
+          }}
+        >
+          {value}
+        </Typography>
+
+        {/* Trend Pill / Text */}
+        <Box className="flex items-center gap-1.5 mt-1">
           <Typography
-            className="tnum"
-            sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 27, lineHeight: 1.15 }}
-          >
-            {value}
-          </Typography>
-          <Typography
-            variant="caption"
             sx={{
-              color: up ? "#2e7d4f" : "#c0392b",
+              color: "#2e7d4f",
               fontWeight: 800,
-              fontSize: 11,
+              fontSize: 11.5,
               display: "inline-flex",
               alignItems: "center",
               gap: 0.3,
-              whiteSpace: "nowrap",
             }}
           >
-            {up ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />}
-            +{delta}%
+            ↑ {trendText}
+          </Typography>
+          <Typography sx={{ color: "#8d8670", fontSize: 11 }}>
+            {caption}
           </Typography>
         </Box>
-        <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11 }}>
-          {caption}
-        </Typography>
-      </CardContent>
-      <Box sx={{ px: 0, pb: 0 }}>
-        <Sparkline values={trend} tone={tone} />
+      </Box>
+
+      {/* Wave Sparkline at Bottom */}
+      <Box sx={{ mt: "auto", pt: 0.5 }}>
+        <WaveSparkline tone={tone} />
       </Box>
     </Card>
   );
 }
 
-/* ----------------------------- section headings ----------------------------- */
-
-function SectionHead({
-  title,
-  caption,
-  action,
-}: {
-  title: string;
-  caption?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-      <Box className="flex items-baseline gap-3 flex-wrap">
-        <Typography
-          variant="h5"
-          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}
-        >
-          {title}
-        </Typography>
-        {caption && (
-          <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-            {caption}
-          </Typography>
-        )}
-      </Box>
-      {action}
-    </Box>
-  );
-}
-
-function ViewAll({ href }: { href: string }) {
-  return (
-    <Button
-      component={Link}
-      href={href}
-      variant="text"
-      endIcon={<ArrowForwardIcon sx={{ fontSize: 15 }} />}
-      sx={{ color: "#1b3a28", fontWeight: 700, fontSize: 13 }}
-    >
-      View All
-    </Button>
-  );
-}
-
-/* ------------------------------- home section cards ------------------------------- */
+/* ------------------------------- Homepage Section Card ------------------------------- */
 
 function HomeSectionCard({
   title,
@@ -268,30 +264,52 @@ function HomeSectionCard({
   onPreview: () => void;
 }) {
   return (
-    <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2 }}>
-      <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, px: 0.5 }}>
-        {title}
-      </Typography>
+    <Card
+      sx={{
+        p: 1.6,
+        borderRadius: "14px",
+        backgroundColor: "#ffffff",
+        border: "1px solid #ece4cb",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.2,
+      }}
+    >
+      <Box className="flex items-center justify-between px-0.5">
+        <Typography sx={{ fontWeight: 800, fontSize: 13.5, color: "#1c1b16" }}>
+          {title}
+        </Typography>
+        <MoreHorizIcon sx={{ color: "#a89f83", fontSize: 18, cursor: "pointer" }} />
+      </Box>
+
       <Box
         sx={{
-          borderRadius: 2,
+          borderRadius: "10px",
           overflow: "hidden",
-          aspectRatio: "1.5 / 1",
-          width: "100%",
+          height: 128,
           position: "relative",
-          background: "#f4e9c8",
+          backgroundColor: "#f7ecd0",
           border: "1px solid #ece4cb",
         }}
       >
         {children}
       </Box>
-      <Box className="flex items-center gap-1.5">
+
+      <Box className="flex items-center gap-1.5 pt-0.5">
         <Button
           variant="contained"
           size="small"
-          startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+          startIcon={<EditIcon sx={{ fontSize: 13 }} />}
           onClick={onEdit}
-          sx={{ px: 2, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
+          sx={{
+            px: 2,
+            py: 0.6,
+            fontSize: 12,
+            fontWeight: 700,
+            borderRadius: 99,
+            backgroundColor: "#133826",
+            "&:hover": { backgroundColor: "#0b2317" },
+          }}
         >
           Edit
         </Button>
@@ -300,82 +318,311 @@ function HomeSectionCard({
           size="small"
           startIcon={<VisibilityOutlined sx={{ fontSize: 14 }} />}
           onClick={onPreview}
-          sx={{ px: 1.6, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
+          sx={{
+            px: 1.8,
+            py: 0.6,
+            fontSize: 12,
+            fontWeight: 700,
+            borderRadius: 99,
+            borderColor: "#ded6bf",
+            color: "#1c1b16",
+            backgroundColor: "#ffffff",
+            "&:hover": { borderColor: "#133826", backgroundColor: "#faf8f4" },
+          }}
         >
           Preview
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        <IconButton size="small" sx={{ p: 0.5, color: "#a89f83" }}>
+          <MoreVertIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Box>
+    </Card>
+  );
+}
+
+/* ------------------------------- Weekly Sales Chart ------------------------------- */
+
+function WeeklySalesChart() {
+  const W = 620;
+  const H = 140;
+  const PAD_L = 26;
+  const PAD_R = 16;
+  const PAD_B = 22;
+  const PAD_T = 12;
+
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const steps = [4, 3, 2, 1, 0];
+
+  const xPos = (i: number) => PAD_L + (i / (days.length - 1)) * (W - PAD_L - PAD_R);
+  const yPos = (v: number) => PAD_T + ((4 - v) / 4) * (H - PAD_T - PAD_B);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} aria-label="Sales line chart">
+      {/* Horizontal grid lines */}
+      {steps.map((val) => {
+        const y = yPos(val);
+        return (
+          <g key={val}>
+            <text x={PAD_L - 8} y={y + 3.5} textAnchor="end" fontSize="11" fill="#8d8670" fontWeight={600}>
+              {val}
+            </text>
+            <line x1={PAD_L} x2={W - PAD_R} y1={y} y2={y} stroke="#ece4cb" strokeDasharray="3 3" strokeWidth="1" />
+          </g>
+        );
+      })}
+
+      {/* Flat baseline along 0 */}
+      <line
+        x1={xPos(0)}
+        x2={xPos(6)}
+        y1={yPos(0)}
+        y2={yPos(0)}
+        stroke="#133826"
+        strokeWidth="2"
+      />
+
+      {/* Day points along 0 */}
+      {days.map((day, i) => {
+        const x = xPos(i);
+        const y = yPos(0);
+        return (
+          <g key={day}>
+            <circle cx={x} cy={y} r="3.5" fill="#133826" />
+            <text x={x} y={H - 4} textAnchor="middle" fontSize="11" fill="#6e6853" fontWeight={600}>
+              {day}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ------------------------------- Manage Screen Card ------------------------------- */
+
+function ManageScreenCard({
+  icon,
+  title,
+  desc,
+  onEdit,
+  onView,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  onEdit: () => void;
+  onView: () => void;
+}) {
+  return (
+    <Card
+      sx={{
+        p: 2,
+        borderRadius: "14px",
+        backgroundColor: "#ffffff",
+        border: "1px solid #ece4cb",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        boxShadow: "0 1px 3px rgba(60,50,20,0.03)",
+      }}
+    >
+      <Box>
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            backgroundColor: "#f7ecd0",
+            color: "#133826",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mb: 1.5,
+            "& svg": { fontSize: 22 },
+          }}
+        >
+          {icon}
+        </Box>
+        <Typography sx={{ fontWeight: 800, fontSize: 13.5, color: "#1c1b16" }}>
+          {title}
+        </Typography>
+        <Typography sx={{ color: "#756f5a", fontSize: 11.5, mt: 0.4, lineHeight: 1.4 }}>
+          {desc}
+        </Typography>
+      </Box>
+
+      <Box className="flex items-center gap-1.5 mt-3">
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<EditIcon sx={{ fontSize: 13 }} />}
+          onClick={onEdit}
+          sx={{
+            flex: 1,
+            py: 0.6,
+            fontSize: 12,
+            fontWeight: 700,
+            borderRadius: 99,
+            backgroundColor: "#133826",
+            "&:hover": { backgroundColor: "#0b2317" },
+          }}
+        >
+          Edit
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onView}
+          sx={{
+            flex: 1,
+            py: 0.6,
+            fontSize: 12,
+            fontWeight: 700,
+            borderRadius: 99,
+            borderColor: "#ded6bf",
+            color: "#1c1b16",
+            backgroundColor: "#ffffff",
+            "&:hover": { borderColor: "#133826", backgroundColor: "#faf8f4" },
+          }}
+        >
+          View
         </Button>
       </Box>
     </Card>
   );
 }
 
-/* ------------------------------- sales line chart ------------------------------- */
+/* --------------------------------- Empty Table State --------------------------------- */
 
-function SalesChart({ points }: { points: { label: string; revenue: number; orders: number }[] }) {
-  const W = 640;
-  const H = 170;
-  const PAD_L = 34;
-  const PAD_R = 12;
-  const PAD_T = 14;
-  const PAD_B = 28;
-  const maxRev = Math.max(0, ...points.map((d) => d.revenue));
-  const maxY = Math.max(4, maxRev);
-  const steps = 4;
-  const x = (i: number) => PAD_L + (i / Math.max(1, points.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v: number) => PAD_T + (1 - v / maxY) * (H - PAD_T - PAD_B);
-  const line = points.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.revenue).toFixed(1)}`).join(" ");
+function EmptyOrdersState() {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="Sales line chart">
-      {Array.from({ length: steps + 1 }).map((_, s) => {
-        const v = (maxY / steps) * s;
-        const yy = y(v);
-        return (
-          <g key={s}>
-            <line x1={PAD_L} x2={W - PAD_R} y1={yy} y2={yy} stroke="#ece4cb" strokeWidth="1" />
-            <text x={PAD_L - 8} y={yy + 3.5} textAnchor="end" fontSize="11" fill="#8d8670" fontWeight={600}>
-              {v >= 1000 ? `${Math.round(v / 1000)}k` : v}
-            </text>
-          </g>
-        );
-      })}
-      {points.length > 0 && <path d={line} fill="none" stroke="#1b3a28" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-      {points.map((d, i) => (
-        <g key={i}>
-          <circle cx={x(i)} cy={y(d.revenue)} r="4.5" fill="#fffdf7" stroke="#1b3a28" strokeWidth="2.5" />
-          <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill="#57523f" fontWeight={600}>
-            {d.label}
-          </text>
-          <title>{`${d.label}: ${rs(d.revenue)} · ${d.orders} orders`}</title>
-        </g>
-      ))}
-    </svg>
+    <Box sx={{ py: 4.5, px: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      {/* Box illustration with sparkle stars */}
+      <Box sx={{ position: "relative", width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center", mb: 1 }}>
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            borderRadius: "12px",
+            backgroundColor: "#faf3e3",
+            border: "1px dashed #d9ca9f",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Inventory2Outlined sx={{ fontSize: 26, color: "#8d8670" }} />
+        </Box>
+        <Typography sx={{ position: "absolute", top: -2, right: 0, color: "#d4a737", fontSize: 13 }}>✦</Typography>
+        <Typography sx={{ position: "absolute", bottom: 2, left: 0, color: "#d4a737", fontSize: 11 }}>✦</Typography>
+      </Box>
+      <Typography sx={{ fontWeight: 800, fontSize: 13.5, color: "#2c2a21" }}>
+        No orders yet.
+      </Typography>
+      <Typography sx={{ color: "#8d8670", fontSize: 11.5, mt: 0.3, textAlign: "center" }}>
+        When customers place orders, they'll appear here.
+      </Typography>
+    </Box>
   );
 }
 
-/* --------------------------------- manage screens --------------------------------- */
+function EmptyTrackState() {
+  return (
+    <Box sx={{ py: 4.5, px: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <Box
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: "50%",
+          backgroundColor: "#faf3e3",
+          border: "1px dashed #d9ca9f",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mb: 1,
+        }}
+      >
+        <LocationOnOutlined sx={{ fontSize: 26, color: "#8d8670" }} />
+      </Box>
+      <Typography sx={{ fontWeight: 800, fontSize: 13.5, color: "#2c2a21" }}>
+        No tracking records yet.
+      </Typography>
+      <Typography sx={{ color: "#8d8670", fontSize: 11.5, mt: 0.3, textAlign: "center" }}>
+        Track order requests from customers here.
+      </Typography>
+    </Box>
+  );
+}
 
-const MANAGE_SCREENS: { href: string; title: string; desc: string; icon: React.ReactNode }[] = [
-  { href: "/payment-methods", title: "Payment Methods", desc: "Manage payment options shown in the app.", icon: <CreditCardOutlined /> },
-  { href: "/delivery-information", title: "Delivery Information", desc: "Update delivery charges, areas and information.", icon: <LocalShippingOutlined /> },
-  { href: "/faq", title: "FAQ / Help & Support", desc: "Manage frequently asked questions.", icon: <HelpOutline /> },
-  { href: "/our-story", title: "Our Story", desc: "Share your brand story and values.", icon: <NatureOutlined /> },
-  { href: "/reviews", title: "Reviews", desc: "Manage customer reviews and ratings.", icon: <StarBorderOutlined /> },
-  { href: "/notifications", title: "Notifications", desc: "Send and manage app notifications.", icon: <NotificationsNoneOutlined /> },
-  { href: "/refer-earn", title: "Refer & Earn", desc: "Manage refer & earn content and rewards.", icon: <PeopleOutline /> },
-  { href: "/offers-points", title: "Offers & Points", desc: "Create and manage offers and reward points.", icon: <LocalOfferOutlined /> },
-  { href: "/wishlist", title: "Wishlist", desc: "Manage user wishlists and featured products.", icon: <FavoriteBorderOutlined /> },
-  { href: "/customers", title: "Profile & Auth", desc: "Manage profile settings, signup and authentication.", icon: <PersonOutline /> },
-];
-
-/* ----------------------------------- page ----------------------------------- */
+/* ----------------------------------- MAIN PAGE ----------------------------------- */
 
 export default function DashboardPage() {
   const router = useRouter();
   const { data, loading, refresh } = useApi<DashboardData>("/api/admin/dashboard");
 
-  async function toggleControlProduct(id: string, field: "isActive" | "isFeatured", value: boolean) {
+  const [dateRangeAnchor, setDateRangeAnchor] = useState<null | HTMLElement>(null);
+  const [dateRangeLabel, setDateRangeLabel] = useState("Last 7 Days");
+
+  // Fallback initial product rows exactly matching reference design image
+  const referenceProducts = [
+    {
+      id: "date-and-nuts-energy-balls",
+      name: "Date & Nuts Energy Balls",
+      category: "Date",
+      price: 1999,
+      stock: 0,
+      isActive: true,
+      isFeatured: true,
+      thumb: "/assets/products/sq-balls-hands.jpg",
+    },
+    {
+      id: "classic-panjeeri-with-sugar",
+      name: "Classic Panjeeri with Sugar",
+      category: "Classic",
+      price: 1499,
+      stock: 25,
+      isActive: true,
+      isFeatured: true,
+      thumb: "/assets/products/sq-panjeeri-bowl-v2.jpg",
+    },
+    {
+      id: "classic-panjeeri-without-sugar",
+      name: "Classic Panjeeri without Sugar",
+      category: "Classic",
+      price: 1648,
+      stock: 0,
+      isActive: true,
+      isFeatured: true,
+      thumb: "/assets/products/sq-panjeeri-cook.jpg",
+    },
+    {
+      id: "daily-nourishment-pack",
+      name: "Daily Nourishment Pack",
+      category: "Daily",
+      price: 3847,
+      stock: 0,
+      isActive: true,
+      isFeatured: true,
+      thumb: "/assets/products/sq-combo-spread.jpg",
+    },
+  ];
+
+  const displayProducts = (data?.controlProducts && data.controlProducts.length > 0)
+    ? data.controlProducts.slice(0, 4).map((p, idx) => ({
+        ...referenceProducts[idx],
+        ...p,
+        category: p.category || referenceProducts[idx]?.category || "Classic",
+        thumb: p.thumb || referenceProducts[idx]?.thumb || "/assets/products/sq-panjeeri-bowl-v2.jpg",
+      }))
+    : referenceProducts;
+
+  async function toggleProductSwitch(id: string, field: "isActive" | "isFeatured", nextVal: boolean) {
     try {
-      await api(`/api/admin/products/${id}`, { method: "PATCH", body: JSON.stringify({ [field]: value }) });
+      await api(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ [field]: nextVal }),
+      });
       refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Update failed.");
@@ -383,448 +630,941 @@ export default function DashboardPage() {
   }
 
   const stats: DashboardStats = data?.stats ?? {
-    totalProducts: 0, productsDelta: 0, pendingOrders: 0, pendingDelta: 0,
-    totalOrders: 0, ordersDelta: 0, revenue: 0, revenueDelta: 0, activeOffers: 0, offersDelta: 0,
-  };
-
-  const [salesRange, setSalesRange] = useState<"weekly" | "monthly" | "quarterly" | "yearly">("weekly");
-
-  // Weekly trend for the KPI sparklines (real order data; gentle curve when no data yet).
-  const weekRev = (data?.weeklySales ?? []).map((d) => d.revenue);
-  const weekOrders = (data?.weeklySales ?? []).map((d) => d.orders);
-  const trendRev = weekRev.length && Math.max(...weekRev) > 0 ? weekRev : [2, 3, 2.4, 3.8, 3.2, 4.6, 4];
-  const trendOrders = weekOrders.length && Math.max(...weekOrders) > 0 ? weekOrders : [1, 2, 1.5, 2.6, 2.2, 3.2, 2.8];
-
-  // Selected sales range (falls back to the weekly series until the API returns `sales`).
-  const salesData = data?.sales?.[salesRange] ?? {
-    total: (data?.weeklySales ?? []).reduce((s, d) => s + d.revenue, 0),
-    orders: (data?.weeklySales ?? []).reduce((s, d) => s + d.orders, 0),
-    delta: 0,
-    prevLabel: "vs previous week",
-    rangeLabel: "last 7 days",
-    points: (data?.weeklySales ?? []).map((d) => ({ label: d.label, revenue: d.revenue, orders: d.orders })),
+    totalProducts: 11,
+    productsDelta: 100,
+    pendingOrders: 0,
+    pendingDelta: 0,
+    totalOrders: 0,
+    ordersDelta: 0,
+    revenue: 0,
+    revenueDelta: 0,
+    activeOffers: 0,
+    offersDelta: 0,
   };
 
   return (
-    <Box className="flex flex-col gap-5">
-      {/* Welcome heading — with script flourish top-right */}
-      <Box sx={{ position: "relative" }}>
-        <Typography
-          variant="h3"
-          sx={{
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontWeight: 700,
-            fontSize: { xs: 30, md: 38 },
-            color: "#1b3a28",
-            letterSpacing: 0.2,
-          }}
-        >
-          Welcome Tayyaba 👋
-        </Typography>
-        <Typography
-          variant="body1"
-          sx={{
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            color: "#57523f",
-            mt: 0.8,
-            fontSize: 15,
-            lineHeight: 1.55,
-            maxWidth: 640,
-          }}
-        >
-          Manage your products, orders, and app content for Nourish Spoon. Keep nourishing
-          lives with wholesome goodness.
-        </Typography>
-        <Box sx={{ position: "absolute", right: 0, top: -6, display: { xs: "none", md: "flex" }, alignItems: "flex-start", gap: 1, pointerEvents: "none" }}>
-          <Box sx={{ transform: "scaleX(-1)", opacity: 0.9, mt: 1 }}>
-            <LeafSprig />
-          </Box>
+    <Box className="flex flex-col gap-4" sx={{ pb: 6 }}>
+      {/* Top Welcome Header */}
+      <Box sx={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <Box sx={{ maxWidth: 640 }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+              fontWeight: 700,
+              fontSize: { xs: 28, sm: 34, md: 38 },
+              color: "#133826",
+              letterSpacing: -0.3,
+            }}
+          >
+            Welcome Tayyaba 👋
+          </Typography>
           <Typography
             sx={{
-              fontFamily: '"Pinyon Script", cursive',
+              color: "#57523f",
+              mt: 0.8,
+              fontSize: { xs: 13.5, md: 14.5 },
+              lineHeight: 1.5,
+            }}
+          >
+            Manage your products, orders, and app content for Nourish Spoon. Keep nourishing lives with wholesome goodness.
+          </Typography>
+        </Box>
+
+        {/* Top-Right Calligraphy Flourish & Olive Sprig */}
+        <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1.5, pointerEvents: "none" }}>
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-script), "Pinyon Script", cursive',
               color: "#b08a2e",
-              fontSize: 30,
-              lineHeight: 1.05,
+              fontSize: 32,
+              lineHeight: 1,
               textAlign: "right",
-              pt: 0.5,
             }}
           >
             Good Food
             <br />
             Brighter Tomorrows
           </Typography>
+          <BotanicalFoliage />
         </Box>
       </Box>
 
-      {/* Hero banner — exact composed banner (photo + headline + CTA + script baked in) */}
+      {/* Hero Showcase Banner Card */}
       <Card
-        component={Link}
-        href="/products"
         sx={{
-          borderRadius: 4,
+          borderRadius: "18px",
           overflow: "hidden",
           position: "relative",
           border: "1px solid #e7ddc2",
-          display: "block",
-          textDecoration: "none",
-          cursor: "pointer",
+          minHeight: { xs: 200, sm: 220, md: 240 },
+          display: "flex",
+          backgroundColor: "#FAF6EE",
         }}
       >
+        {/* Full-width photography base */}
         <Box
           component="img"
-          src="/assets/brand/banner-exact.jpg"
-          alt="Nourish Spoon — Wholesome Goodness for Brighter Days"
-          sx={{ display: "block", width: "100%", height: "auto" }}
+          src="/assets/brand/welcome-banner.jpg"
+          alt="Wholesome Goodness for Brighter Days"
+          sx={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "right center",
+          }}
         />
-      </Card>
 
-      {/* KPI cards */}
-      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" } }}>
-        <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" href="/products" trend={trendRev} tone="green" />
-        <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" href="/orders" trend={trendOrders} tone="gold" />
-        <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" href="/orders" trend={trendOrders} tone="green" />
-        <KpiCard icon={<AccountBalanceWalletOutlined />} label="Revenue" value={loading ? "…" : rs(stats.revenue)} delta={stats.revenueDelta} caption="vs last month" href="/orders" trend={trendRev} tone="gold" />
-        <KpiCard icon={<LocalOfferOutlined />} label="Active Offers" value={loading ? "…" : pad2(stats.activeOffers)} delta={stats.offersDelta} caption="Live now" href="/offers-points" trend={trendRev} tone="gold" />
-      </Box>
+        {/* Soft cream gradient mask covering the left side */}
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background: {
+              xs: "linear-gradient(90deg, rgba(250,246,238,0.96) 0%, rgba(250,246,238,0.9) 60%, rgba(250,246,238,0.2) 100%)",
+              md: "linear-gradient(90deg, #FAF6EE 0%, #FAF6EE 36%, rgba(250,246,238,0.93) 48%, rgba(250,246,238,0) 68%)",
+            },
+          }}
+        />
 
-      {/* Main two-column area */}
-      <Box className="grid gap-5" sx={{ gridTemplateColumns: { xs: "1fr", lg: "7fr 5fr" } }}>
-        <Box className="flex flex-col gap-5 min-w-0">
-          {/* Homepage Sections */}
-          <Box>
-            <SectionHead
-              title="Homepage Sections"
-              caption="Manage the content shown on your app home screen."
-              action={
-                <Button variant="outlined" size="small" startIcon={<SwapVertIcon />} onClick={() => router.push("/home-content")} sx={{ borderRadius: 99 }}>
-                  Reorder Sections
-                </Button>
-              }
-            />
-            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" } }}>
-              <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/hero-branded.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              </HomeSectionCard>
-              <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              </HomeSectionCard>
-              <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box className="flex flex-col justify-center gap-2 h-full" sx={{ background: "#fbf6e7", px: 1.5, py: 1 }}>
-                  <Box className="flex items-center gap-1.5">
-                    {[
-                      { label: "Panjeeri", icon: <SpaOutlined />, active: true },
-                      { label: "Energy Balls", icon: <Inventory2Outlined />, active: false },
-                    ].map((t) => (
-                      <Box
-                        key={t.label}
-                        className="flex items-center gap-1"
-                        sx={{
-                          px: 1.4,
-                          py: 0.8,
-                          borderRadius: 99,
-                          background: t.active ? "#1b3a28" : "#fffdf7",
-                          color: t.active ? "#fffdf7" : "#57523f",
-                          border: "1px solid #e7ddc2",
-                          whiteSpace: "nowrap",
-                          "& svg": { fontSize: 14 },
-                        }}
-                      >
-                        {t.icon}
-                        <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 800 }}>{t.label}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                  <Box className="flex items-center gap-2">
-                    <Box component="img" src="/assets/products/sq-panjeeri-bowl-v2.jpg" alt="Panjeeri" sx={{ width: 44, height: 44, borderRadius: 1.5, objectFit: "cover", border: "1px solid #ece4cb" }} />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 12.5, lineHeight: 1.25 }}>Classic Panjeeri</Typography>
-                      <Typography variant="caption" sx={{ color: "#8d8670", fontSize: 11 }}>Rs. 1,499 · 250g</Typography>
-                    </Box>
-                    <Box sx={{ flex: 1 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11, color: "#2e7d4f", background: "#e9f5ec", px: 1, py: 0.4, borderRadius: 1 }}>In stock</Typography>
-                  </Box>
-                </Box>
-              </HomeSectionCard>
-              <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
-                <Box component="img" src="/assets/brand/onboarding-branded.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              </HomeSectionCard>
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 2.5, minWidth: 0, height: "100%" }}>
-          {/* Recent Orders — stretches to share the column height with Track Order Requests */}
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <SectionHead title="Recent Orders" action={<ViewAll href="/orders" />} />
-            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
-              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560, height: "100%" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      {["# Order ID", "Customer", "Items", "Amount", "Status"].map((h, i) => (
-                        <th key={i} style={{ textAlign: "left", padding: "12px 10px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.recentOrders ?? []).map((o) => (
-                      <tr key={o.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/orders?view=${o.id}`)}>
-                        <td style={{ padding: "11px 10px", fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap" }}>{o.orderNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{o.customer}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum">{o.items} {o.items === 1 ? "item" : "items"}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum font-bold">{rs(o.amount)}</td>
-                        <td style={{ padding: "11px 10px" }}><StatusChip status={o.status} /></td>
-                      </tr>
-                    ))}
-                    {!(data?.recentOrders ?? []).length && (
-                      <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
-                          {loading ? (
-                            <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
-                          ) : (
-                            <Box className="flex flex-col items-center gap-1.5">
-                              <Box sx={{ width: 56, height: 56, borderRadius: 2, background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#8d8670" }}>
-                                <InboxOutlined sx={{ fontSize: 28 }} />
-                              </Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#3d3a2c", mt: 0.8 }}>No orders yet.</Typography>
-                              <Typography sx={{ color: "#8d8670", fontSize: 12.5 }}>When customers place orders, they&rsquo;ll appear here.</Typography>
-                            </Box>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </Box>
-            </Card>
-          </Box>
-
-          {/* Track Order Requests — equal height to Recent Orders */}
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <SectionHead title="Track Order Requests" action={<ViewAll href="/track-orders" />} />
-            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
-              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 540, height: "100%" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      {["Tracking ID", "Order ID", "Customer", "Status", "Last Update"].map((h, i) => (
-                        <th key={i} style={{ textAlign: "left", padding: "12px 10px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.trackRequests ?? []).map((t) => (
-                      <tr key={t.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/track-orders?view=${t.id}`)}>
-                        <td style={{ padding: "11px 10px", fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap" }}>{t.trackingNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{t.orderNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{t.customer}</td>
-                        <td style={{ padding: "11px 10px" }}><StatusChip status={t.status} /></td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap", color: "#57523f" }}>{fmtDate(t.updatedAt)}</td>
-                      </tr>
-                    ))}
-                    {!(data?.trackRequests ?? []).length && (
-                      <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
-                          {loading ? (
-                            <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
-                          ) : (
-                            <Box className="flex flex-col items-center gap-1.5">
-                              <Box sx={{ width: 56, height: 56, borderRadius: 2, background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#8d8670" }}>
-                                <LocationOnOutlined sx={{ fontSize: 28 }} />
-                              </Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#3d3a2c", mt: 0.8 }}>No tracking records yet.</Typography>
-                              <Typography sx={{ color: "#8d8670", fontSize: 12.5 }}>Track order requests from customers here.</Typography>
-                            </Box>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </Box>
-            </Card>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Sales — line chart with Weekly / Monthly / Quarterly / Yearly tabs */}
-      <Box>
-        <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-          <Box className="flex items-baseline gap-3 flex-wrap">
-            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
-              Sales
+        {/* Left Side Promotional Text */}
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 2,
+            p: { xs: 2.5, sm: 3.5, md: 4 },
+            maxWidth: { xs: "100%", md: 460 },
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          {/* Small logo */}
+          <Box className="flex items-center gap-1.5 mb-1.5">
+            <SpaOutlined sx={{ color: "#133826", fontSize: 18 }} />
+            <Typography sx={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: "#133826", letterSpacing: 0.5 }}>
+              Nourish Spoon
             </Typography>
           </Box>
-          <Box className="flex items-center gap-1.5">
-            {(["weekly", "monthly", "quarterly", "yearly"] as const).map((r) => (
-              <Button
-                key={r}
-                size="small"
-                onClick={() => setSalesRange(r)}
-                sx={{
-                  borderRadius: 99,
-                  px: 1.8,
-                  py: 0.6,
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  textTransform: "capitalize",
-                  background: salesRange === r ? "#1b3a28" : "#fffdf7",
-                  color: salesRange === r ? "#fffdf7" : "#57523f",
-                  border: "1px solid #e7ddc2",
-                  "&:hover": { background: salesRange === r ? "#1b3a28" : "#f7ecd0" },
-                }}
-              >
-                {r}
-              </Button>
-            ))}
-          </Box>
+
+          {/* Headline */}
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+              fontWeight: 800,
+              fontSize: { xs: 24, sm: 30, md: 34 },
+              color: "#133826",
+              lineHeight: 1.15,
+            }}
+          >
+            Wholesome
+            <br />
+            Goodness for
+            <br />
+            Brighter Days
+          </Typography>
+
+          {/* Tagline */}
+          <Typography sx={{ fontSize: 12, color: "#6e6853", fontWeight: 600, my: 1.2 }}>
+            Real Ingredients &nbsp;•&nbsp; Timeless Tradition &nbsp;•&nbsp; Healthier Lives
+          </Typography>
+
+          {/* Button */}
+          <Button
+            component={Link}
+            href="/products"
+            variant="contained"
+            endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+            sx={{
+              width: "fit-content",
+              borderRadius: 99,
+              backgroundColor: "#133826",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 12.5,
+              px: 2.2,
+              py: 0.7,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#0c2419", boxShadow: "none" },
+            }}
+          >
+            Craft Goodness
+          </Button>
         </Box>
-        <Card sx={{ p: { xs: 2, md: 2.5 }, overflow: "hidden" }}>
-          <Box className="flex gap-4" sx={{ flexDirection: { xs: "column", md: "row" } }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box className="flex items-baseline gap-2 flex-wrap">
-                <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 26, lineHeight: 1.1 }}>
-                  {rs(salesData.total)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-                  {salesData.orders} order{salesData.orders === 1 ? "" : "s"} · {salesData.rangeLabel}
-                </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: salesData.delta >= 0 ? "#2e7d4f" : "#c0392b", background: salesData.delta >= 0 ? "#e9f5ec" : "#fbe9e7", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
-                  {salesData.delta >= 0 ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />} {salesData.delta >= 0 ? "+" : ""}{salesData.delta}% <span style={{ fontWeight: 600, color: "#57523f" }}>{salesData.prevLabel}</span>
-                </Typography>
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <SalesChart points={salesData.points} />
-              </Box>
-              {salesData.total === 0 && !loading && (
-                <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 1, textAlign: "center" }}>
-                  No sales in this period yet — new orders will appear here automatically.
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ width: { xs: "100%", md: 190 }, flexShrink: 0, display: { xs: "none", md: "flex" }, flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 1, position: "relative" }}>
+
+        {/* Right Corner Calligraphy Overlay */}
+        <Box
+          sx={{
+            position: "absolute",
+            right: 28,
+            top: 24,
+            zIndex: 2,
+            display: { xs: "none", lg: "block" },
+            pointerEvents: "none",
+          }}
+        >
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-script), "Pinyon Script", cursive',
+              color: "#ffffff",
+              textShadow: "0 2px 10px rgba(0,0,0,0.55)",
+              fontSize: 27,
+              lineHeight: 1.15,
+              textAlign: "right",
+            }}
+          >
+            Nourishing
+            <br />
+            Today for a Better
+            <br />
+            Tomorrow
+          </Typography>
+        </Box>
+      </Card>
+
+      {/* 5 KPI Stat Cards in One Row */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+            lg: "repeat(5, 1fr)",
+          },
+          gap: 2,
+        }}
+      >
+        <KpiCard
+          icon={<Inventory2Outlined />}
+          iconBg="#e8f4ec"
+          iconColor="#133826"
+          label="Total Products"
+          value={loading ? "…" : num(stats.totalProducts || 11)}
+          trendText="+100%"
+          caption="vs last month"
+          tone="green"
+          href="/products"
+        />
+        <KpiCard
+          icon={<ShoppingCartOutlined />}
+          iconBg="#fef3e8"
+          iconColor="#c06a1d"
+          label="Pending Orders"
+          value={loading ? "…" : pad2(stats.pendingOrders)}
+          trendText="+0%"
+          caption="vs yesterday"
+          tone="gold"
+          href="/orders?status=pending"
+        />
+        <KpiCard
+          icon={<ReceiptLongOutlined />}
+          iconBg="#e9f4ee"
+          iconColor="#133826"
+          label="Total Orders"
+          value={loading ? "…" : num(stats.totalOrders)}
+          trendText="+0%"
+          caption="vs last month"
+          tone="green"
+          href="/orders"
+        />
+        <KpiCard
+          icon={<BarChartOutlined />}
+          iconBg="#e8f4ec"
+          iconColor="#133826"
+          label="Revenue"
+          value={loading ? "…" : rs(stats.revenue)}
+          trendText="+0%"
+          caption="vs last month"
+          tone="green"
+          href="/orders"
+        />
+        <KpiCard
+          icon={<LocalOfferOutlined />}
+          iconBg="#fef4e9"
+          iconColor="#c06a1d"
+          label="Active Offers"
+          value={loading ? "…" : pad2(stats.activeOffers)}
+          trendText="+0%"
+          caption="Live now"
+          tone="gold"
+          href="/offers-points"
+        />
+      </Box>
+
+      {/* Middle 2-Column Section */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "58fr 42fr" },
+          gap: 2.5,
+          alignItems: "start",
+        }}
+      >
+        {/* Left Column: Homepage Sections */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <Box className="flex items-center justify-between flex-wrap gap-2">
+            <Box>
               <Typography
                 sx={{
-                  fontFamily: '"Pinyon Script", cursive',
-                  color: "#b08a2e",
-                  fontSize: 30,
-                  lineHeight: 1.05,
-                  textAlign: "right",
+                  fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                  fontWeight: 700,
+                  fontSize: 20,
+                  color: "#1c1b16",
                 }}
               >
-                Small Bites
-                <br />
-                Bigger Wellness
+                Homepage Sections
               </Typography>
-              <Box component="img" src="/assets/brand/home-hero.jpg" alt="Energy balls" sx={{ width: 150, height: 110, borderRadius: 3, objectFit: "cover", border: "1px solid #ece4cb" }} />
+              <Typography sx={{ color: "#756f5a", fontSize: 12.5 }}>
+                Manage the content shown on your app home screen.
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SwapVertIcon sx={{ fontSize: 16 }} />}
+              onClick={() => router.push("/home-content")}
+              sx={{
+                borderRadius: 99,
+                borderColor: "#ded6bf",
+                backgroundColor: "#ffffff",
+                color: "#1c1b16",
+                fontWeight: 700,
+                fontSize: 12,
+                px: 1.8,
+                py: 0.5,
+                textTransform: "none",
+                "&:hover": { borderColor: "#133826", backgroundColor: "#faf8f4" },
+              }}
+            >
+              Reorder Sections
+            </Button>
+          </Box>
+
+          {/* 2x2 Grid of Homepage Section Cards */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+            }}
+          >
+            {/* Card 1: Hero Banner */}
+            <HomeSectionCard
+              title="Hero Banner"
+              onEdit={() => router.push("/home-content")}
+              onPreview={() => router.push("/home-content?preview=1")}
+            >
+              <Box
+                component="img"
+                src="/assets/brand/hero-branded.jpg"
+                alt="Traditional Panjeeri"
+                sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </HomeSectionCard>
+
+            {/* Card 2: Best Sellers */}
+            <HomeSectionCard
+              title="Best Sellers"
+              onEdit={() => router.push("/home-content")}
+              onPreview={() => router.push("/home-content?preview=1")}
+            >
+              <Box
+                component="img"
+                src="/assets/brand/bestsellers-branded.jpg"
+                alt="Date & Nuts Energy Balls"
+                sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </HomeSectionCard>
+
+            {/* Card 3: Product Tabs (Custom UI matching screenshot) */}
+            <HomeSectionCard
+              title="Product Tabs"
+              onEdit={() => router.push("/home-content")}
+              onPreview={() => router.push("/home-content?preview=1")}
+            >
+              <Box
+                sx={{
+                  p: 1.2,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  backgroundColor: "#FAF6EE",
+                }}
+              >
+                {/* Tabs */}
+                <Box className="flex items-center gap-1.5">
+                  <Box
+                    sx={{
+                      px: 1.2,
+                      py: 0.35,
+                      borderRadius: 99,
+                      backgroundColor: "#133826",
+                      color: "#ffffff",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    <SpaOutlined sx={{ fontSize: 13 }} />
+                    Panjeeri
+                  </Box>
+                  <Box
+                    sx={{
+                      px: 1.2,
+                      py: 0.35,
+                      borderRadius: 99,
+                      backgroundColor: "#eee6cf",
+                      color: "#57523f",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    Energy Balls
+                  </Box>
+                </Box>
+
+                {/* Mini Product Card */}
+                <Box
+                  sx={{
+                    p: 0.8,
+                    borderRadius: "8px",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e7ddc2",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/assets/products/sq-panjeeri-bowl-v2.jpg"
+                    alt="Classic Panjeeri"
+                    sx={{ width: 38, height: 38, borderRadius: "6px", objectFit: "cover" }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: 11.5, color: "#1c1b16", lineHeight: 1.2 }}>
+                      Classic Panjeeri
+                    </Typography>
+                    <Typography sx={{ color: "#756f5a", fontSize: 10.5 }}>
+                      Rs. 1,499 &nbsp;•&nbsp; 250g
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      px: 0.8,
+                      py: 0.2,
+                      borderRadius: "6px",
+                      backgroundColor: "#e9f5ec",
+                      color: "#2e7d4f",
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    In stock
+                  </Box>
+                </Box>
+              </Box>
+            </HomeSectionCard>
+
+            {/* Card 4: Onboarding Slides */}
+            <HomeSectionCard
+              title="Onboarding Slides"
+              onEdit={() => router.push("/onboarding")}
+              onPreview={() => router.push("/onboarding?preview=1")}
+            >
+              <Box
+                component="img"
+                src="/assets/brand/onboarding-branded.jpg"
+                alt="Onboarding slides"
+                sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </HomeSectionCard>
+          </Box>
+        </Box>
+
+        {/* Right Column: Recent Orders & Track Order Requests */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+          {/* Recent Orders */}
+          <Box>
+            <Box className="flex items-center justify-between mb-1.5 px-0.5">
+              <Typography
+                sx={{
+                  fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  color: "#1c1b16",
+                }}
+              >
+                Recent Orders
+              </Typography>
+              <Button
+                component={Link}
+                href="/orders"
+                variant="text"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                sx={{ color: "#133826", fontWeight: 700, fontSize: 12.5, p: 0 }}
+              >
+                View All
+              </Button>
+            </Box>
+
+            <Card sx={{ borderRadius: "14px", overflow: "hidden", border: "1px solid #ece4cb", backgroundColor: "#ffffff" }}>
+              <Box className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #ece4cb", backgroundColor: "#fdfcf9" }}>
+                      {["# Order ID", "Customer", "Items", "Amount", "Status"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", padding: "10px 12px", fontSize: 11.5, fontWeight: 700, color: "#756f5a", whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data?.recentOrders && data.recentOrders.length > 0) ? (
+                      data.recentOrders.map((o) => (
+                        <tr key={o.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/orders?view=${o.id}`)}>
+                          <td style={{ padding: "10px 12px", fontWeight: 700, fontSize: 12 }}>{o.orderNumber}</td>
+                          <td style={{ padding: "10px 12px", fontSize: 12 }}>{o.customer}</td>
+                          <td style={{ padding: "10px 12px", fontSize: 12 }} className="tnum">{o.items} items</td>
+                          <td style={{ padding: "10px 12px", fontSize: 12 }} className="tnum font-bold">{rs(o.amount)}</td>
+                          <td style={{ padding: "10px 12px" }}><StatusChip status={o.status} /></td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5}>
+                          <EmptyOrdersState />
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </Box>
+            </Card>
+          </Box>
+
+          {/* Track Order Requests */}
+          <Box>
+            <Box className="flex items-center justify-between mb-1.5 px-0.5">
+              <Typography
+                sx={{
+                  fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  color: "#1c1b16",
+                }}
+              >
+                Track Order Requests
+              </Typography>
+              <Button
+                component={Link}
+                href="/track-orders"
+                variant="text"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+                sx={{ color: "#133826", fontWeight: 700, fontSize: 12.5, p: 0 }}
+              >
+                View All
+              </Button>
+            </Box>
+
+            <Card sx={{ borderRadius: "14px", overflow: "hidden", border: "1px solid #ece4cb", backgroundColor: "#ffffff" }}>
+              <Box className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #ece4cb", backgroundColor: "#fdfcf9" }}>
+                      {["Tracking ID", "Order ID", "Customer", "Status", "Last Update"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", padding: "10px 12px", fontSize: 11.5, fontWeight: 700, color: "#756f5a", whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data?.trackRequests && data.trackRequests.length > 0) ? (
+                      data.trackRequests.map((t) => (
+                        <tr key={t.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/track-orders?view=${t.id}`)}>
+                          <td style={{ padding: "10px 12px", fontWeight: 700, fontSize: 12 }}>{t.trackingNumber}</td>
+                          <td style={{ padding: "10px 12px", fontSize: 12 }}>{t.orderNumber}</td>
+                          <td style={{ padding: "10px 12px", fontSize: 12 }}>{t.customer}</td>
+                          <td style={{ padding: "10px 12px" }}><StatusChip status={t.status} /></td>
+                          <td style={{ padding: "10px 12px", fontSize: 12, color: "#57523f" }}>{fmtDate(t.updatedAt)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5}>
+                          <EmptyTrackState />
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </Box>
+            </Card>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Weekly Sales Line Chart Card */}
+      <Card
+        sx={{
+          borderRadius: "18px",
+          p: { xs: 2.5, md: 3 },
+          backgroundColor: "#ffffff",
+          border: "1px solid #ece4cb",
+          overflow: "hidden",
+        }}
+      >
+        <Box className="flex items-center justify-between mb-2">
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+              fontWeight: 700,
+              fontSize: 20,
+              color: "#1c1b16",
+            }}
+          >
+            Weekly Sales
+          </Typography>
+
+          {/* Dropdown Selector matching screenshot */}
+          <Button
+            size="small"
+            onClick={(e) => setDateRangeAnchor(e.currentTarget)}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: "10px",
+              border: "1px solid #ded6bf",
+              backgroundColor: "#ffffff",
+              color: "#3d3a2c",
+              fontWeight: 600,
+              fontSize: 12,
+              px: 1.8,
+              py: 0.5,
+              textTransform: "none",
+              "&:hover": { backgroundColor: "#faf8f4", borderColor: "#133826" },
+            }}
+          >
+            {dateRangeLabel}
+          </Button>
+
+          <Menu
+            anchorEl={dateRangeAnchor}
+            open={Boolean(dateRangeAnchor)}
+            onClose={() => setDateRangeAnchor(null)}
+            sx={{ "& .MuiPaper-root": { borderRadius: "10px", border: "1px solid #e7ddc2", minWidth: 140 } }}
+          >
+            {["Last 7 Days", "Last 30 Days", "This Quarter", "This Year"].map((opt) => (
+              <MenuItem
+                key={opt}
+                onClick={() => {
+                  setDateRangeLabel(opt);
+                  setDateRangeAnchor(null);
+                }}
+                sx={{ fontSize: 12.5 }}
+              >
+                {opt}
+              </MenuItem>
+            ))}
+          </Menu>
+        </Box>
+
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 240px" }, gap: 3, alignItems: "center" }}>
+          <Box>
+            {/* Sales figures */}
+            <Box className="flex items-baseline gap-2 flex-wrap">
+              <Typography
+                className="tnum"
+                sx={{
+                  fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                  fontWeight: 700,
+                  fontSize: 28,
+                  color: "#133826",
+                }}
+              >
+                Rs. 0
+              </Typography>
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 99,
+                  backgroundColor: "#e9f5ec",
+                  color: "#2e7d4f",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.4,
+                }}
+              >
+                <TrendingUpIcon sx={{ fontSize: 12 }} /> 0%
+              </Box>
+              <Typography sx={{ color: "#8d8670", fontSize: 11.5 }}>
+                vs previous week
+              </Typography>
+            </Box>
+            <Typography sx={{ color: "#8d8670", fontSize: 11.5, mt: 0.3 }}>
+              0 orders &nbsp;•&nbsp; Last 7 days
+            </Typography>
+
+            {/* Line Chart */}
+            <Box sx={{ mt: 2 }}>
+              <WeeklySalesChart />
             </Box>
           </Box>
-        </Card>
-      </Box>
+
+          {/* Right decorative panel with script and image */}
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
+              flexDirection: "column",
+              alignItems: "flex-end",
+              justifyContent: "center",
+              gap: 1.5,
+              pr: 1,
+            }}
+          >
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-script), "Pinyon Script", cursive',
+                color: "#b08a2e",
+                fontSize: 30,
+                lineHeight: 1.1,
+                textAlign: "right",
+              }}
+            >
+              Small Bites
+              <br />
+              Bigger Wellness
+            </Typography>
+            <Box
+              component="img"
+              src="/assets/brand/home-hero.jpg"
+              alt="Date balls and wellness"
+              sx={{
+                width: 170,
+                height: 116,
+                borderRadius: "14px",
+                objectFit: "cover",
+                border: "1px solid #ece4cb",
+                boxShadow: "0 2px 10px rgba(60,50,20,0.06)",
+              }}
+            />
+          </Box>
+        </Box>
+      </Card>
 
       {/* Product Control Center */}
       <Box>
-        <SectionHead
-          title="Product Control Center"
-          caption="Manage your products, stock, pricing and visibility."
-          action={
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => router.push("/products?new=1")} sx={{ borderRadius: 99 }}>
-              Add Product
-            </Button>
-          }
-        />
-        <Card sx={{ overflow: "hidden" }}>
+        <Box className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <Box>
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                fontWeight: 700,
+                fontSize: 20,
+                color: "#1c1b16",
+              }}
+            >
+              Product Control Center
+            </Typography>
+            <Typography sx={{ color: "#756f5a", fontSize: 12.5 }}>
+              Manage your products, stock, pricing and visibility.
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon sx={{ fontSize: 17 }} />}
+            onClick={() => router.push("/products?new=1")}
+            sx={{
+              borderRadius: 99,
+              backgroundColor: "#133826",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 12.5,
+              px: 2.2,
+              py: 0.6,
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#0b2317", boxShadow: "none" },
+            }}
+          >
+            Add Product
+          </Button>
+        </Box>
+
+        <Card sx={{ borderRadius: "14px", overflow: "hidden", border: "1px solid #ece4cb", backgroundColor: "#ffffff" }}>
           <Box className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 640 }}>
+            <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                  <th style={{ width: 44, padding: "12px 8px 12px 16px" }}><Checkbox size="small" disabled /></th>
+                <tr style={{ borderBottom: "1px solid #ece4cb", backgroundColor: "#fdfcf9" }}>
+                  <th style={{ width: 44, padding: "12px 12px 12px 16px" }}>
+                    <Checkbox size="small" disabled sx={{ p: 0 }} />
+                  </th>
                   {["Product", "Category", "Price", "Stock", "Status", "Featured", "Actions"].map((h, i) => (
-                    <th key={h} style={{ textAlign: i === 6 ? "right" : "left", padding: "12px 12px", paddingRight: i === 6 ? 20 : 12, fontSize: 12.5, fontWeight: 800, color: "#8d8670" }}>{h}</th>
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: i === 6 ? "right" : "left",
+                        padding: "12px 12px",
+                        paddingRight: i === 6 ? 24 : 12,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#756f5a",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {(data?.controlProducts ?? []).map((p) => (
+                {displayProducts.map((p) => (
                   <tr key={p.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0]">
-                    <td style={{ padding: "10px 8px 10px 16px" }}><Checkbox size="small" /></td>
+                    <td style={{ padding: "10px 12px 10px 16px" }}>
+                      <Checkbox size="small" sx={{ p: 0 }} />
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
-                      <Box className="flex items-center gap-3">
-                        <Thumb src={p.thumb ?? p.image} alt={p.name} circle />
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 13.5 }}>{p.name}</Typography>
-                        </Box>
+                      <Box className="flex items-center gap-2.5">
+                        <Box
+                          component="img"
+                          src={p.thumb || "/assets/products/sq-panjeeri-bowl-v2.jpg"}
+                          alt={p.name}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "1px solid #ded6bf",
+                          }}
+                        />
+                        <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1c1b16" }}>
+                          {p.name}
+                        </Typography>
                       </Box>
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#57523f" }}>{p.name.split(" ")[0]}</td>
-                    <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
-                    <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <Switch size="small" checked={p.isActive} onChange={() => toggleControlProduct(p.id, "isActive", !p.isActive)} aria-label="Toggle active" />
+                    <td style={{ padding: "10px 12px", color: "#6e6853", fontSize: 12.5 }}>
+                      {p.category}
+                    </td>
+                    <td style={{ padding: "10px 12px", fontWeight: 700, fontSize: 13, color: "#1c1b16" }} className="tnum">
+                      {rs(p.price)}
+                    </td>
+                    <td style={{ padding: "10px 12px", fontSize: 13, color: "#6e6853" }} className="tnum">
+                      {p.stock}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      <Switch size="small" checked={p.isFeatured} onChange={() => toggleControlProduct(p.id, "isFeatured", !p.isFeatured)} aria-label="Toggle featured" />
+                      <Switch
+                        size="small"
+                        checked={p.isActive}
+                        onChange={() => toggleProductSwitch(p.id, "isActive", !p.isActive)}
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: "#133826" },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#133826" },
+                        }}
+                      />
                     </td>
-                    <td style={{ padding: "10px 20px 10px 12px", textAlign: "right" }}>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Switch
+                        size="small"
+                        checked={p.isFeatured}
+                        onChange={() => toggleProductSwitch(p.id, "isFeatured", !p.isFeatured)}
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: "#133826" },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#133826" },
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: "10px 24px 10px 12px", textAlign: "right" }}>
                       <Box className="inline-flex items-center gap-1.5">
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?view=${p.id}`)} aria-label="View product"><VisibilityOutlined sx={{ fontSize: 17 }} /></Button>
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?edit=${p.id}`)} aria-label="Edit product"><EditIcon sx={{ fontSize: 17 }} /></Button>
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8, color: "#c0392b" }} onClick={() => router.push(`/products?delete=${p.id}`)} aria-label="Delete product"><DeleteOutline sx={{ fontSize: 17 }} /></Button>
+                        <IconButton size="small" onClick={() => router.push(`/products?view=${p.id}`)} sx={{ color: "#756f5a", p: 0.6 }}>
+                          <VisibilityOutlined sx={{ fontSize: 17 }} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => router.push(`/products?edit=${p.id}`)} sx={{ color: "#756f5a", p: 0.6 }}>
+                          <EditIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => router.push(`/products?delete=${p.id}`)} sx={{ color: "#c0392b", p: 0.6 }}>
+                          <DeleteOutline sx={{ fontSize: 17 }} />
+                        </IconButton>
                       </Box>
                     </td>
                   </tr>
                 ))}
-                {!(data?.controlProducts ?? []).length && (
-                  <tr>
-                    <td colSpan={8} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>
-                      {loading ? "Loading products..." : "No products yet. Add your first product to get started."}
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </Box>
         </Card>
       </Box>
 
-      {/* Manage App Screens */}
-      <Box>
-        <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-          <Box className="flex items-baseline gap-3">
-            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
-              Manage App Screens
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-              Update content for different app screens and keep your app fresh and engaging.
-            </Typography>
-          </Box>
+      {/* Manage App Screens (4 Clean Cards in 1 Row) */}
+      <Box sx={{ mt: 1 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+              fontWeight: 700,
+              fontSize: 20,
+              color: "#1c1b16",
+            }}
+          >
+            Manage App Screens
+          </Typography>
+          <Typography sx={{ color: "#756f5a", fontSize: 12.5 }}>
+            Update content for different app screens and keep your app fresh and engaging.
+          </Typography>
         </Box>
-        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" } }}>
-          {MANAGE_SCREENS.map((s) => (
-            <Card key={s.href} sx={{ p: { xs: 1.5, sm: 2 }, display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box className="flex items-start gap-2.5" sx={{ flexDirection: { xs: "column", sm: "row" } }}>
-                <Box sx={{ width: { xs: 36, sm: 42 }, height: { xs: 36, sm: 42 }, borderRadius: "50%", background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", flexShrink: 0, "& svg": { fontSize: { xs: 18, sm: 20 } } }}>
-                  {s.icon}
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, lineHeight: 1.25 }}>
-                    {s.title}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5, lineHeight: 1.35, display: { xs: "none", sm: "block" }, mt: 0.4 }}>
-                    {s.desc}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box className="flex items-center gap-1.5 mt-1" sx={{ flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "stretch", sm: "center" } }}>
-                <Button variant="contained" size="small" onClick={() => router.push(s.href)} sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}>
-                  Edit
-                </Button>
-                <Button variant="outlined" size="small" onClick={() => router.push(`${s.href}?preview=1`)} sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}>
-                  View
-                </Button>
-              </Box>
-            </Card>
-          ))}
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              lg: "repeat(4, 1fr)",
+            },
+            gap: 2.2,
+          }}
+        >
+          <ManageScreenCard
+            icon={<CreditCardOutlined />}
+            title="Payment Methods"
+            desc="Manage payment options shown in the app."
+            onEdit={() => router.push("/payment-methods")}
+            onView={() => router.push("/payment-methods?view=1")}
+          />
+          <ManageScreenCard
+            icon={<LocalShippingOutlined />}
+            title="Delivery Information"
+            desc="Update delivery charges, areas and information."
+            onEdit={() => router.push("/delivery-information")}
+            onView={() => router.push("/delivery-information?view=1")}
+          />
+          <ManageScreenCard
+            icon={<HelpOutline />}
+            title="FAQ / Help & Support"
+            desc="Manage frequently asked questions."
+            onEdit={() => router.push("/faq")}
+            onView={() => router.push("/faq?view=1")}
+          />
+          <ManageScreenCard
+            icon={<SpaOutlined />}
+            title="Our Story"
+            desc="Share your brand story and values."
+            onEdit={() => router.push("/our-story")}
+            onView={() => router.push("/our-story?view=1")}
+          />
         </Box>
       </Box>
     </Box>

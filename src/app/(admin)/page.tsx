@@ -215,7 +215,7 @@ function HomeSectionCard({
         sx={{
           borderRadius: 2,
           overflow: "hidden",
-          aspectRatio: "2.9 / 1",
+          aspectRatio: "2.2 / 1",
           width: "100%",
           position: "relative",
           background: "#f4e9c8",
@@ -278,7 +278,36 @@ export default function DashboardPage() {
 
   return (
     <Box className="flex flex-col gap-5">
-      {/* Hero banner */}
+      {/* Welcome heading above the banner — website fonts (Playfair + Inter) */}
+      <Box>
+        <Typography
+          variant="h3"
+          sx={{
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontWeight: 700,
+            fontSize: { xs: 30, md: 38 },
+            color: "#1b3a28",
+            letterSpacing: 0.2,
+          }}
+        >
+          Welcome Tayyaba
+        </Typography>
+        <Typography
+          variant="body1"
+          sx={{
+            fontFamily: "var(--font-inter), Inter, sans-serif",
+            color: "#57523f",
+            mt: 0.8,
+            fontSize: 15,
+            lineHeight: 1.55,
+          }}
+        >
+          Manage your products, orders, and app content for Nourish Spoon. Keep nourishing
+          lives with wholesome goodness.
+        </Typography>
+      </Box>
+
+      {/* Hero banner — image only */}
       <Card
         sx={{
           borderRadius: 4,
@@ -301,43 +330,7 @@ export default function DashboardPage() {
             objectPosition: "center 42%",
           }}
         />
-        <Box className="flex items-center" sx={{ position: "relative", minHeight: 232 }}>
-          <Box
-            sx={{
-              ml: { xs: 3, md: 5 },
-              mr: 2,
-              my: 4,
-              px: { xs: 2.5, md: 3.5 },
-              py: { xs: 2.5, md: 3 },
-              borderRadius: 3,
-              maxWidth: 520,
-              background: "rgba(251, 246, 231, 0.55)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid rgba(255, 255, 255, 0.65)",
-            }}
-          >
-            <Typography
-              variant="h3"
-              sx={{
-                fontFamily: '"Playfair Display", Georgia, serif',
-                fontWeight: 700,
-                fontSize: { xs: 32, md: 44 },
-                color: "#1b3a28",
-                letterSpacing: 0.2,
-              }}
-            >
-              Welcome Tayyaba
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ color: "#57523f", mt: 1.2, fontSize: 15, lineHeight: 1.55 }}
-            >
-              Manage your products, orders, and app content for Nourish Spoon. Keep nourishing
-              lives with wholesome goodness.
-            </Typography>
-          </Box>
-        </Box>
+        <Box sx={{ position: "relative", minHeight: 232 }} />
       </Card>
 
       {/* KPI cards */}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Nunito_Sans, Pinyon_Script } from "next/font/google";
+import { Playfair_Display, Nunito_Sans, Pinyon_Script, Inter } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -27,6 +27,13 @@ const pinyon = Pinyon_Script({
   display: "swap",
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Nourish Spoon — Admin Dashboard",
   description: "Operational and content control for the Nourish Spoon app.",
@@ -37,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${nunito.variable} ${pinyon.variable}`}
+      className={`${playfair.variable} ${nunito.variable} ${pinyon.variable} ${inter.variable}`}
     >
       <body>
         <AppRouterCacheProvider>

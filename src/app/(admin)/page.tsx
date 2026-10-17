@@ -82,16 +82,30 @@ function KpiCard({
   value,
   delta,
   caption,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   delta: number;
   caption: string;
+  href: string;
 }) {
   const up = delta >= 0;
   return (
-    <Card sx={{ p: 0, flex: 1, minWidth: 0 }}>
+    <Card
+      component={Link}
+      href={href}
+      sx={{
+        p: 0,
+        flex: 1,
+        minWidth: 0,
+        textDecoration: "none",
+        cursor: "pointer",
+        transition: "box-shadow .15s ease, transform .15s ease",
+        "&:hover": { boxShadow: "0 6px 18px rgba(27,58,40,0.12)", transform: "translateY(-1px)" },
+      }}
+    >
       <CardContent
         sx={{ p: 2.2, display: "flex", alignItems: "center", gap: 1.8, "&:last-child": { pb: 2.2 } }}
       >
@@ -215,7 +229,7 @@ function HomeSectionCard({
         sx={{
           borderRadius: 2,
           overflow: "hidden",
-          aspectRatio: "2.2 / 1",
+          aspectRatio: "1.5 / 1",
           width: "100%",
           position: "relative",
           background: "#f4e9c8",
@@ -335,11 +349,11 @@ export default function DashboardPage() {
 
       {/* KPI cards */}
       <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" } }}>
-        <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" />
-        <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" />
-        <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" />
-        <KpiCard icon={<AccountBalanceWalletOutlined />} label="Revenue" value={loading ? "…" : rs(stats.revenue)} delta={stats.revenueDelta} caption="vs last month" />
-        <KpiCard icon={<LocalOfferOutlined />} label="Active Offers" value={loading ? "…" : pad2(stats.activeOffers)} delta={stats.offersDelta} caption="Live now" />
+        <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" href="/products" />
+        <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" href="/orders" />
+        <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" href="/orders" />
+        <KpiCard icon={<AccountBalanceWalletOutlined />} label="Revenue" value={loading ? "…" : rs(stats.revenue)} delta={stats.revenueDelta} caption="vs last month" href="/orders" />
+        <KpiCard icon={<LocalOfferOutlined />} label="Active Offers" value={loading ? "…" : pad2(stats.activeOffers)} delta={stats.offersDelta} caption="Live now" href="/offers-points" />
       </Box>
 
       {/* Main two-column area */}
@@ -358,19 +372,10 @@ export default function DashboardPage() {
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", "@media (min-width:1660px)": "repeat(4, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(251,246,231,0.94) 0%, rgba(251,246,231,0.6) 48%, rgba(251,246,231,0) 72%)" }} />
-                <Box sx={{ position: "absolute", left: 10, top: 10, color: "#1b3a28" }}>
-                  <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
-                    Traditional
-                    <br />
-                    Panjeeri
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontSize: 11, color: "#57523f" }}>from Sargodha</Typography>
-                </Box>
+                <Box component="img" src="/assets/brand/hero-branded.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/energy-balls.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box className="flex items-center justify-center gap-1 h-full" sx={{ background: "#fbf6e7", px: 0.5 }}>
@@ -389,15 +394,7 @@ export default function DashboardPage() {
                 </Box>
               </HomeSectionCard>
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
-                <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(251,246,231,0.92) 0%, rgba(251,246,231,0.55) 42%, rgba(251,246,231,0) 68%)" }} />
-                <Box sx={{ position: "absolute", left: 10, bottom: 8 }}>
-                  <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, lineHeight: 1.15 }}>
-                    Real Ingredients
-                    <br />
-                    Real Nutrition
-                  </Typography>
-                </Box>
+                <Box component="img" src="/assets/brand/onboarding-branded.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
             </Box>
           </Box>
@@ -554,27 +551,24 @@ export default function DashboardPage() {
               Update content for different app screens and keep your app fresh and engaging.
             </Typography>
           </Box>
-          <Button variant="text" startIcon={<SettingsOutlined sx={{ fontSize: 16 }} />} sx={{ color: "#1b3a28", fontWeight: 700, fontSize: 13 }}>
-            Quick Actions
-          </Button>
         </Box>
-        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" } }}>
+        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" } }}>
           {MANAGE_SCREENS.map((s) => (
-            <Card key={s.href} sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box className="flex items-start gap-2.5">
-                <Box sx={{ width: 42, height: 42, borderRadius: "50%", background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", flexShrink: 0, "& svg": { fontSize: 20 } }}>
+            <Card key={s.href} sx={{ p: { xs: 1.5, sm: 2 }, display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box className="flex items-start gap-2.5" sx={{ flexDirection: { xs: "column", sm: "row" } }}>
+                <Box sx={{ width: { xs: 36, sm: 42 }, height: { xs: 36, sm: 42 }, borderRadius: "50%", background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", flexShrink: 0, "& svg": { fontSize: { xs: 18, sm: 20 } } }}>
                   {s.icon}
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, lineHeight: 1.25 }}>
                     {s.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5, lineHeight: 1.35, display: "block", mt: 0.4 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5, lineHeight: 1.35, display: { xs: "none", sm: "block" }, mt: 0.4 }}>
                     {s.desc}
                   </Typography>
                 </Box>
               </Box>
-              <Box className="flex items-center gap-1.5 mt-1">
+              <Box className="flex items-center gap-1.5 mt-1" sx={{ flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "stretch", sm: "center" } }}>
                 <Button variant="contained" size="small" onClick={() => router.push(s.href)} sx={{ px: 2.2, py: 0.6, fontSize: 12 }}>
                   Edit
                 </Button>

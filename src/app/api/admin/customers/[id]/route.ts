@@ -12,13 +12,26 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const profile = docToJSON(snap);
     if (!profile) return Response.json({ error: "Customer not found." }, { status: 404 });
 
+    // NOTE: No orderBy() here — Firestore equality + orderBy on different fields
+    // needs a composite index, and a missing index made the WHOLE profile 500
+    // ("try again"). We fetch then sort in memory, and each sub-query is
+    // isolated so one failure never kills the profile.
     const [addrSnap, ordersSnap, pointsSnap, wishlistSnap, refSnap] = await Promise.all([
-      db.collection("users").doc(id).collection("addresses").get(),
-      db.collection("orders").where("userId", "==", id).orderBy("createdAt", "desc").limit(50).get(),
-      db.collection("rewardTransactions").where("userId", "==", id).orderBy("at", "desc").limit(50).get(),
-      db.collection("users").doc(id).collection("wishlist").get(),
-      db.collection("referrals").where("referrerId", "==", id).orderBy("createdAt", "desc").limit(50).get().catch(() => null),
+      db.collection("users").doc(id).collection("addresses").get().catch(() => ({ docs: [] as unknown[] })),
+      db.collection("orders").where("userId", "==", id).limit(50).get().catch(() => ({ docs: [] as unknown[] })),
+      db.collection("rewardTransactions").where("userId", "==", id).limit(50).get().catch(() => ({ docs: [] as unknown[] })),
+      db.collection("users").doc(id).collection("wishlist").get().catch(() => ({ docs: [] as unknown[] })),
+      db.collection("referrals").where("referrerId", "==", id).limit(50).get().catch(() => null),
     ]);
+    const byDateDesc = (a: Record<string, unknown>, b: Record<string, unknown>, field: string) =>
+      String(b[field] ?? "").localeCompare(String(a[field] ?? ""));
+    const toRows = (docs: readonly unknown[]) =>
+      docs
+        .map((d) => docToJSON(d as never))
+        .filter((r): r is Record<string, unknown> => r !== null);
+    const orders = toRows(ordersSnap.docs).sort((a, b) => byDateDesc(a, b, "createdAt"));
+    const pointsHistory = toRows(pointsSnap.docs).sort((a, b) => byDateDesc(a, b, "at"));
+    const referrals = toRows(refSnap ? refSnap.docs : []).sort((a, b) => byDateDesc(a, b, "createdAt"));
 
     let disabled = false;
     try {
@@ -30,7 +43,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     // Enrich wishlist with product names.
     const wishlist = await Promise.all(
       wishlistSnap.docs.map(async (d) => {
-        const w = docToJSON(d) as Record<string, unknown>;
+        const w = docToJSON(d as never) as Record<string, unknown>;
         if (w.productId) {
           const p = await db.collection("products").doc(w.productId as string).get().catch(() => null);
           if (p?.exists) {
@@ -45,11 +58,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
     return Response.json({
       item: { ...profile, disabled },
-      addresses: addrSnap.docs.map((d) => docToJSON(d)),
-      orders: ordersSnap.docs.map((d) => docToJSON(d)),
-      pointsHistory: pointsSnap.docs.map((d) => docToJSON(d)),
+      addresses: addrSnap.docs.map((d) => docToJSON(d as never)),
+      orders,
+      pointsHistory,
       wishlist,
-      referrals: refSnap ? refSnap.docs.map((d) => docToJSON(d)) : [],
+      referrals,
     });
   } catch (err) {
     return authErrorResponse(err);

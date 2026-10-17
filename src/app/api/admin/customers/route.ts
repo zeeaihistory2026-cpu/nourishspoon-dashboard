@@ -8,8 +8,11 @@ export async function GET(req: Request) {
     const search = (url.searchParams.get("search") ?? "").toLowerCase().trim();
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 1000);
 
-    const snap = await adminDb().collection("users").orderBy("createdAt", "desc").limit(limit).get();
+    // No orderBy("createdAt") — Firestore orderBy silently drops docs missing
+    // that field (one customer had no createdAt and never appeared). Sort below.
+    const snap = await adminDb().collection("users").limit(limit).get();
     let items = snap.docs.map((d) => docToJSON(d)).filter(Boolean) as Record<string, unknown>[];
+    items.sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
     if (search) {
       items = items.filter((u) =>
         [u.fullName, u.email, u.phone, u.uid, u.id]

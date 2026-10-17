@@ -363,25 +363,6 @@ export default function Shell({
                         <SearchIcon sx={{ color: "#8d8670", fontSize: 19 }} />
                       </InputAdornment>
                     ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Box
-                          sx={{
-                            border: "1px solid #ded6bf",
-                            borderRadius: "6px",
-                            px: 0.8,
-                            py: 0.15,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: "#8d8670",
-                            backgroundColor: "#f7f4ea",
-                            userSelect: "none",
-                          }}
-                        >
-                          ⌘ K
-                        </Box>
-                      </InputAdornment>
-                    ),
                     sx: {
                       borderRadius: "12px",
                       backgroundColor: "#ffffff",

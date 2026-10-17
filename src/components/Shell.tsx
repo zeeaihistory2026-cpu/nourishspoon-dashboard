@@ -52,9 +52,10 @@ import { api } from "@/lib/api";
 export interface AdminUser {
   name: string;
   email: string;
+  role?: "admin" | "child";
 }
 
-const NAV: { href: string; label: string; icon: React.ReactNode }[] = [
+const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
   { href: "/", label: "Dashboard", icon: <HomeOutlined /> },
   { href: "/home-content", label: "Home Content", icon: <ImageOutlined /> },
   { href: "/onboarding", label: "Onboarding", icon: <SpaOutlined /> },
@@ -71,6 +72,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode }[] = [
   { href: "/reviews", label: "Reviews", icon: <StarBorderOutlined /> },
   { href: "/wishlist", label: "Wishlist", icon: <FavoriteBorderOutlined /> },
   { href: "/customers", label: "Profile & Auth", icon: <PersonOutline /> },
+  { href: "/user-access", label: "User Access", icon: <PeopleOutline />, adminOnly: true },
 ];
 
 const SIDEBAR_W = 232;
@@ -98,8 +100,9 @@ function LeafSprig() {
   );
 }
 
-function SidebarBody({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
+function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () => void; collapsed?: boolean; role?: "admin" | "child" }) {
   const pathname = usePathname();
+  const items = NAV.filter((item) => !item.adminOnly || role === "admin");
   return (
     <Box className="h-full flex flex-col" sx={{ background: "#f6f1e1", overflow: "hidden" }}>
       <Box sx={{ px: collapsed ? 1 : 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}>
@@ -126,7 +129,7 @@ function SidebarBody({ onNavigate, collapsed = false }: { onNavigate?: () => voi
 
       <Box className="flex-1 overflow-y-auto" sx={{ px: collapsed ? 1 : 1.5, pb: 2 }}>
         <List disablePadding>
-          {NAV.map((item) => {
+          {items.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
@@ -250,7 +253,7 @@ export default function Shell({
             transition: "width 0.25s ease",
           }}
         >
-          <SidebarBody collapsed={collapsed} />
+          <SidebarBody collapsed={collapsed} role={admin.role} />
         </Box>
       ) : (
         <Drawer
@@ -259,7 +262,7 @@ export default function Shell({
           ModalProps={{ keepMounted: true }}
           sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_W } }}
         >
-          <SidebarBody onNavigate={() => setMobileOpen(false)} />
+          <SidebarBody onNavigate={() => setMobileOpen(false)} role={admin.role} />
         </Drawer>
       )}
 
@@ -338,7 +341,7 @@ export default function Shell({
                   {admin.name}
                 </Typography>
                 <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11 }}>
-                  Admin
+                  {admin.role === "child" ? "Child Access" : "Admin"}
                 </Typography>
               </Box>
               <ExpandMoreIcon sx={{ fontSize: 18, color: "#8d8670" }} />

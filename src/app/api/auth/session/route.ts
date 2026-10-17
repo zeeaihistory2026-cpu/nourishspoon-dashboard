@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase-admin";
 import { SESSION_COOKIE, adminAllowlist } from "@/lib/auth-server";
+import { getAccessRecord } from "@/lib/access";
 
 /**
  * Exchange a Firebase ID token (from client sign-in) for an httpOnly
@@ -18,8 +19,15 @@ export async function POST(req: Request) {
     const allowlist = adminAllowlist();
     const isAllowlisted = email !== "" && allowlist.includes(email);
     const hasClaim = decoded.admin === true;
+    // Users granted access via the User Access page (adminAccess) must also
+    // be able to sign in — requireAdmin() resolves them per-request, so the
+    // session exchange has to admit them here. Never bootstrap the `admin`
+    // custom claim for them: child accounts must not carry it.
+    const accessRecord = !isAllowlisted && !hasClaim && email !== ""
+      ? await getAccessRecord(email).catch(() => null)
+      : null;
 
-    if (!isAllowlisted && !hasClaim) {
+    if (!isAllowlisted && !hasClaim && !accessRecord) {
       return Response.json(
         { error: "This account is not authorised for the admin dashboard." },
         { status: 403 }

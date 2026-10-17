@@ -47,11 +47,14 @@ export async function GET() {
 
     // ---- Products ----
     const productsSnap = await db.collection("products").limit(500).get();
-    const products = productsSnap.docs
+    const allProducts = productsSnap.docs
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((d) => ({ id: d.id, ...(d.data() as any) }))
-      .filter((p) => p.isActive !== false && !p.deletedAt);
-    const totalProducts = products.length;
+      .filter((p) => !p.deletedAt);
+    const products = allProducts.filter((p) => p.isActive !== false);
+    // "Total Products" must count every non-deleted product (11), not just
+    // the active ones (10) — otherwise the KPI disagrees with the Products tab.
+    const totalProducts = allProducts.length;
     const newThisMonth = products.filter(
       (p) => tsOf(p.createdAt) >= monthStart.getTime()
     ).length;
@@ -165,7 +168,12 @@ export async function GET() {
         const fa = a.isFeatured ? 0 : 1;
         const fb = b.isFeatured ? 0 : 1;
         if (fa !== fb) return fa - fb;
-        return tsOf(b.createdAt) - tsOf(a.createdAt);
+        const ta = tsOf(a.createdAt);
+        const tb = tsOf(b.createdAt);
+        if (tb !== ta) return tb - ta;
+        // Deterministic tiebreaker: products without createdAt tie at 0 —
+        // without this the order varied between loads.
+        return String(a.name ?? "").localeCompare(String(b.name ?? ""));
       })
       .slice(0, 4)
       .map((p) => ({

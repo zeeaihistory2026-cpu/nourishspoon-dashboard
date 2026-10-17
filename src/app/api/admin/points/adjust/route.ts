@@ -16,6 +16,9 @@ export async function POST(req: Request) {
     const userData = userSnap.data() as { points?: number; fullName?: string };
     const before = userData.points ?? 0;
     const after = before + parsed.delta;
+    if (after < 0) {
+      return Response.json({ error: "Insufficient points: this would take the balance below zero." }, { status: 400 });
+    }
 
     const batch = db.batch();
     batch.update(userRef, {

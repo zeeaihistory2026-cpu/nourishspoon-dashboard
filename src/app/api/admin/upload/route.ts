@@ -28,10 +28,20 @@ export async function POST(req: Request) {
     const bucket = adminStorage().bucket();
     const path = `${folder}/${Date.now()}-${safeName(file.name)}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await bucket.file(path).save(buffer, {
-      metadata: { contentType: file.type },
-      public: true,
-    });
+    try {
+      await bucket.file(path).save(buffer, {
+        metadata: { contentType: file.type },
+        public: true,
+      });
+    } catch (err) {
+      // The Firebase Storage bucket does not exist in this project, so file
+      // uploads cannot succeed. Surface a clear message instead of a generic
+      // 500 — the form offers a "paste image URL" fallback.
+      return Response.json(
+        { error: "Image uploads are unavailable (storage is not set up for this project). Paste an image URL instead." },
+        { status: 503 }
+      );
+    }
     const url = `https://storage.googleapis.com/${bucket.name}/${encodeURI(path)}`;
     return Response.json({ url, path }, { status: 201 });
   } catch (err) {

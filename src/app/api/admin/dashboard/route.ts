@@ -176,14 +176,33 @@ export async function GET() {
         stock: (p.stock as number) ?? 0,
         isActive: p.isActive !== false,
         isFeatured: p.isFeatured === true,
-        image: Array.isArray(p.images) ? (p.images[0] as string) ?? "" : "",
+        image: Array.isArray(p.images) && p.images[0] ? (p.images[0] as string) : ((p.image as string) ?? ""),
       }));
+
+    // ---- Weekly sales (last 7 days, real order data only) ----
+    const dayLabels: string[] = [];
+    const weeklySales: { date: string; label: string; revenue: number; orders: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now - i * 24 * 60 * 60 * 1000);
+      d.setHours(0, 0, 0, 0);
+      const next = new Date(d.getTime() + 24 * 60 * 60 * 1000);
+      const dayOrders = orders.filter((o) => o.t >= d.getTime() && o.t < next.getTime() && valid(o));
+      const label = d.toLocaleDateString("en-US", { weekday: "short" });
+      dayLabels.push(label);
+      weeklySales.push({
+        date: d.toISOString().slice(0, 10),
+        label,
+        revenue: Math.round(dayOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
+        orders: dayOrders.length,
+      });
+    }
 
     return Response.json({
       stats,
       recentOrders,
       trackRequests,
       controlProducts,
+      weeklySales,
     });
   } catch (err) {
     return authErrorResponse(err);

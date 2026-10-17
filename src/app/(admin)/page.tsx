@@ -38,7 +38,7 @@ import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SpaOutlined from "@mui/icons-material/SpaOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
-import { useApi } from "@/lib/api";
+import { useApi, api } from "@/lib/api";
 import { rs, num, pad2, fmtDate } from "@/lib/format";
 import { StatusChip, Thumb } from "@/components/ui";
 import type { DashboardStats } from "@/lib/types";
@@ -71,6 +71,12 @@ interface DashboardData {
     isActive: boolean;
     isFeatured: boolean;
     image: string;
+  }[];
+  weeklySales: {
+    date: string;
+    label: string;
+    revenue: number;
+    orders: number;
   }[];
 }
 
@@ -283,7 +289,16 @@ const MANAGE_SCREENS: { href: string; title: string; desc: string; icon: React.R
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data, loading } = useApi<DashboardData>("/api/admin/dashboard");
+  const { data, loading, refresh } = useApi<DashboardData>("/api/admin/dashboard");
+
+  async function toggleControlProduct(id: string, field: "isActive" | "isFeatured", value: boolean) {
+    try {
+      await api(`/api/admin/products/${id}`, { method: "PATCH", body: JSON.stringify({ [field]: value }) });
+      refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Update failed.");
+    }
+  }
 
   const stats: DashboardStats = data?.stats ?? {
     totalProducts: 0, productsDelta: 0, pendingOrders: 0, pendingDelta: 0,
@@ -378,19 +393,41 @@ export default function DashboardPage() {
                 <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box className="flex items-center justify-center gap-1 h-full" sx={{ background: "#fbf6e7", px: 0.5 }}>
-                  {[
-                    { label: "Panjeeri", icon: <SpaOutlined /> },
-                    { label: "Energy Balls", icon: <Inventory2Outlined /> },
-                    { label: "Combos", icon: <ShoppingCartOutlined /> },
-                  ].map((t) => (
-                    <Box key={t.label} className="flex flex-col items-center gap-0.5" sx={{ flex: 1, minWidth: 0 }}>
-                      <Box sx={{ width: 34, height: 34, borderRadius: "50%", background: "#f4e9c8", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", border: "1px solid #e7ddc2", "& svg": { fontSize: 16 } }}>
+                <Box className="flex flex-col justify-center gap-2 h-full" sx={{ background: "#fbf6e7", px: 1.5, py: 1 }}>
+                  <Box className="flex items-center gap-1.5">
+                    {[
+                      { label: "Panjeeri", icon: <SpaOutlined />, active: true },
+                      { label: "Energy Balls", icon: <Inventory2Outlined />, active: false },
+                      { label: "Combos", icon: <ShoppingCartOutlined />, active: false },
+                    ].map((t) => (
+                      <Box
+                        key={t.label}
+                        className="flex items-center gap-1"
+                        sx={{
+                          px: 1.4,
+                          py: 0.8,
+                          borderRadius: 99,
+                          background: t.active ? "#1b3a28" : "#fffdf7",
+                          color: t.active ? "#fffdf7" : "#57523f",
+                          border: "1px solid #e7ddc2",
+                          whiteSpace: "nowrap",
+                          "& svg": { fontSize: 14 },
+                        }}
+                      >
                         {t.icon}
+                        <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 800 }}>{t.label}</Typography>
                       </Box>
-                      <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: "#57523f", whiteSpace: "nowrap" }}>{t.label}</Typography>
+                    ))}
+                  </Box>
+                  <Box className="flex items-center gap-2">
+                    <Box component="img" src="/assets/products/sq-panjeeri-bowl.jpg" alt="Panjeeri" sx={{ width: 44, height: 44, borderRadius: 1.5, objectFit: "cover", border: "1px solid #ece4cb" }} />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 12.5, lineHeight: 1.25 }}>Classic Panjeeri</Typography>
+                      <Typography variant="caption" sx={{ color: "#8d8670", fontSize: 11 }}>Rs. 1,499 · 250g</Typography>
                     </Box>
-                  ))}
+                    <Box sx={{ flex: 1 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11, color: "#2e7d4f", background: "#e9f5ec", px: 1, py: 0.4, borderRadius: 1 }}>In stock</Typography>
+                  </Box>
                 </Box>
               </HomeSectionCard>
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
@@ -399,70 +436,6 @@ export default function DashboardPage() {
             </Box>
           </Box>
 
-          {/* Product Control Center */}
-          <Box>
-            <SectionHead
-              title="Product Control Center"
-              caption="Manage your products, stock, pricing and visibility."
-              action={
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => router.push("/products?new=1")}>
-                  Add Product
-                </Button>
-              }
-            />
-            <Card sx={{ overflow: "hidden" }}>
-              <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      <th style={{ width: 44, padding: "12px 8px 12px 16px" }}><Checkbox size="small" disabled /></th>
-                      {["Product", "Price", "Stock", "Status", "Featured", "Actions"].map((h, i) => (
-                        <th key={h} style={{ textAlign: i === 5 ? "right" : "left", padding: "12px 12px", paddingRight: i === 5 ? 20 : 12, fontSize: 12.5, fontWeight: 800, color: "#8d8670" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.controlProducts ?? []).map((p) => (
-                      <tr key={p.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0]">
-                        <td style={{ padding: "10px 8px 10px 16px" }}><Checkbox size="small" /></td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <Box className="flex items-center gap-3">
-                            <Thumb src={p.image} alt={p.name} />
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 13.5 }}>{p.name}</Typography>
-                              <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 12 }}>{p.weight}</Typography>
-                            </Box>
-                          </Box>
-                        </td>
-                        <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
-                        <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <StatusChip status={p.isActive ? "active" : "inactive"} />
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <Switch size="small" checked={p.isFeatured} onChange={() => router.push(`/products?featured=${p.id}`)} />
-                        </td>
-                        <td style={{ padding: "10px 20px 10px 12px", textAlign: "right" }}>
-                          <Box className="inline-flex items-center gap-1.5">
-                            <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?view=${p.id}`)} aria-label="View product"><VisibilityOutlined sx={{ fontSize: 17 }} /></Button>
-                            <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?edit=${p.id}`)} aria-label="Edit product"><EditIcon sx={{ fontSize: 17 }} /></Button>
-                            <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8, color: "#c0392b" }} onClick={() => router.push(`/products?delete=${p.id}`)} aria-label="Delete product"><DeleteOutline sx={{ fontSize: 17 }} /></Button>
-                          </Box>
-                        </td>
-                      </tr>
-                    ))}
-                    {!(data?.controlProducts ?? []).length && (
-                      <tr>
-                        <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>
-                          {loading ? "Loading products..." : "No products yet. Add your first product to get started."}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </Box>
-            </Card>
-          </Box>
         </Box>
 
         <Box className="flex flex-col gap-5 min-w-0">
@@ -537,7 +510,128 @@ export default function DashboardPage() {
               </Box>
             </Card>
           </Box>
+
+          {/* Weekly Sales Chart — real order data, last 7 days */}
+          <Box>
+            <SectionHead title="Weekly Sales" action={<ViewAll href="/orders" />} />
+            <Card sx={{ p: 2.5 }}>
+              {(() => {
+                const days = data?.weeklySales ?? [];
+                const maxRev = Math.max(0, ...days.map((d) => d.revenue));
+                const weekTotal = days.reduce((s, d) => s + d.revenue, 0);
+                const weekOrders = days.reduce((s, d) => s + d.orders, 0);
+                return (
+                  <>
+                    <Box className="flex items-baseline gap-2 flex-wrap">
+                      <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 26, lineHeight: 1.1 }}>
+                        {rs(weekTotal)}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
+                        {weekOrders} order{weekOrders === 1 ? "" : "s"} · last 7 days
+                      </Typography>
+                    </Box>
+                    <Box className="flex items-end gap-2 mt-4" sx={{ height: 130 }}>
+                      {days.map((d) => {
+                        const h = maxRev > 0 ? Math.max(6, Math.round((d.revenue / maxRev) * 100)) : 6;
+                        const isToday = d.date === new Date().toISOString().slice(0, 10);
+                        return (
+                          <Box key={d.date} className="flex flex-col items-center gap-1.5" sx={{ flex: 1, minWidth: 0 }} title={`${d.label}: ${rs(d.revenue)} · ${d.orders} orders`}>
+                            <Typography variant="caption" sx={{ fontSize: 10.5, fontWeight: 700, color: "#57523f", whiteSpace: "nowrap" }}>
+                              {d.revenue > 0 ? rs(d.revenue) : "—"}
+                            </Typography>
+                            <Box
+                              sx={{
+                                width: "100%",
+                                maxWidth: 44,
+                                height: h,
+                                borderRadius: "8px 8px 3px 3px",
+                                background: isToday ? "#1b3a28" : d.revenue > 0 ? "#c9a227" : "#ece4cb",
+                                transition: "height .3s ease",
+                              }}
+                            />
+                            <Typography variant="caption" sx={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? "#1b3a28" : "#8d8670" }}>
+                              {d.label}
+                            </Typography>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                    {weekTotal === 0 && !loading && (
+                      <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 2, textAlign: "center" }}>
+                        No orders this week yet — new orders will appear here automatically.
+                      </Typography>
+                    )}
+                  </>
+                );
+              })()}
+            </Card>
+          </Box>
         </Box>
+      </Box>
+
+      {/* Product Control Center */}
+      <Box>
+        <SectionHead
+          title="Product Control Center"
+          caption="Manage your products, stock, pricing and visibility."
+          action={
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => router.push("/products?new=1")}>
+              Add Product
+            </Button>
+          }
+        />
+        <Card sx={{ overflow: "hidden" }}>
+          <Box className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #ece4cb" }}>
+                  <th style={{ width: 44, padding: "12px 8px 12px 16px" }}><Checkbox size="small" disabled /></th>
+                  {["Product", "Price", "Stock", "Status", "Featured", "Actions"].map((h, i) => (
+                    <th key={h} style={{ textAlign: i === 5 ? "right" : "left", padding: "12px 12px", paddingRight: i === 5 ? 20 : 12, fontSize: 12.5, fontWeight: 800, color: "#8d8670" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.controlProducts ?? []).map((p) => (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0]">
+                    <td style={{ padding: "10px 8px 10px 16px" }}><Checkbox size="small" /></td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Box className="flex items-center gap-3">
+                        <Thumb src={p.image} alt={p.name} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 13.5 }}>{p.name}</Typography>
+                          <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 12 }}>{p.weight}</Typography>
+                        </Box>
+                      </Box>
+                    </td>
+                    <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
+                    <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Switch size="small" checked={p.isActive} onChange={() => toggleControlProduct(p.id, "isActive", !p.isActive)} aria-label="Toggle active" />
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Switch size="small" checked={p.isFeatured} onChange={() => toggleControlProduct(p.id, "isFeatured", !p.isFeatured)} aria-label="Toggle featured" />
+                    </td>
+                    <td style={{ padding: "10px 20px 10px 12px", textAlign: "right" }}>
+                      <Box className="inline-flex items-center gap-1.5">
+                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?view=${p.id}`)} aria-label="View product"><VisibilityOutlined sx={{ fontSize: 17 }} /></Button>
+                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?edit=${p.id}`)} aria-label="Edit product"><EditIcon sx={{ fontSize: 17 }} /></Button>
+                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8, color: "#c0392b" }} onClick={() => router.push(`/products?delete=${p.id}`)} aria-label="Delete product"><DeleteOutline sx={{ fontSize: 17 }} /></Button>
+                      </Box>
+                    </td>
+                  </tr>
+                ))}
+                {!(data?.controlProducts ?? []).length && (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>
+                      {loading ? "Loading products..." : "No products yet. Add your first product to get started."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Box>
+        </Card>
       </Box>
 
       {/* Manage App Screens */}

@@ -493,6 +493,15 @@ function Page() {
     }
   }
 
+  async function toggleActive(p: Product) {
+    try {
+      await api(`/api/admin/products/${p.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !p.isActive }) });
+      refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Update failed.");
+    }
+  }
+
   async function confirmDelete() {
     if (!deleting) return;
     setBusy(true);
@@ -614,7 +623,9 @@ function Page() {
                   <td style={{ padding: "10px 12px" }} className="tnum">
                     <Typography variant="body2" sx={{ fontWeight: 700, color: (p.stock ?? 0) <= 0 ? "#c0392b" : undefined }}>{p.stock ?? 0}</Typography>
                   </td>
-                  <td style={{ padding: "10px 12px" }}><StatusChip status={p.isActive ? "active" : "inactive"} /></td>
+                  <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
+                    <Switch size="small" checked={p.isActive} onChange={() => toggleActive(p)} aria-label="Toggle active" />
+                  </td>
                   <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
                     <Switch size="small" checked={p.isFeatured} onChange={() => toggleFeatured(p)} aria-label="Toggle featured" />
                   </td>

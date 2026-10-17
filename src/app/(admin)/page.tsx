@@ -7,7 +7,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Checkbox,
   IconButton,
   Menu,
@@ -37,8 +36,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
 import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { useApi, api } from "@/lib/api";
 import { rs, num, pad2, fmtDate } from "@/lib/format";
-import { StatusChip, Thumb } from "@/components/ui";
-import { LeafSprig } from "@/components/Shell";
+import { StatusChip } from "@/components/ui";
 import type { DashboardStats } from "@/lib/types";
 
 interface DashboardData {
@@ -84,20 +82,20 @@ interface DashboardData {
 
 function BotanicalFoliage() {
   return (
-    <svg width="180" height="110" viewBox="0 0 180 110" fill="none" aria-hidden>
+    <svg width="140" height="90" viewBox="0 0 140 90" fill="none" aria-hidden>
       <path
-        d="M170 10 C 130 30, 80 50, 10 95"
+        d="M130 8 C 100 24, 60 42, 8 76"
         stroke="#8fa876"
-        strokeWidth="2.4"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
       {[
-        [150, 22, -35, 24, 9],
-        [130, 36, 32, 22, 8.5],
-        [110, 50, -32, 24, 9],
-        [88, 64, 30, 20, 8],
-        [66, 76, -28, 20, 7.5],
-        [42, 86, 26, 18, 7],
+        [115, 18, -35, 20, 7.5],
+        [98, 30, 32, 18, 7],
+        [82, 42, -32, 20, 7.5],
+        [64, 52, 30, 16, 6.5],
+        [46, 62, -28, 16, 6],
+        [28, 70, 26, 14, 5.5],
       ].map(([x, y, r, rx, ry], i) => (
         <ellipse
           key={i}
@@ -359,7 +357,6 @@ function WeeklySalesChart() {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} aria-label="Sales line chart">
-      {/* Horizontal grid lines */}
       {steps.map((val) => {
         const y = yPos(val);
         return (
@@ -372,7 +369,6 @@ function WeeklySalesChart() {
         );
       })}
 
-      {/* Flat baseline along 0 */}
       <line
         x1={xPos(0)}
         x2={xPos(6)}
@@ -382,7 +378,6 @@ function WeeklySalesChart() {
         strokeWidth="2"
       />
 
-      {/* Day points along 0 */}
       {days.map((day, i) => {
         const x = xPos(i);
         const y = yPos(0);
@@ -498,7 +493,6 @@ function ManageScreenCard({
 function EmptyOrdersState() {
   return (
     <Box sx={{ py: 4.5, px: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      {/* Box illustration with sparkle stars */}
       <Box sx={{ position: "relative", width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center", mb: 1 }}>
         <Box
           sx={{
@@ -564,7 +558,6 @@ export default function DashboardPage() {
   const [dateRangeAnchor, setDateRangeAnchor] = useState<null | HTMLElement>(null);
   const [dateRangeLabel, setDateRangeLabel] = useState("Last 7 Days");
 
-  // Fallback initial product rows exactly matching reference design image
   const referenceProducts = [
     {
       id: "date-and-nuts-energy-balls",
@@ -644,17 +637,30 @@ export default function DashboardPage() {
 
   return (
     <Box className="flex flex-col gap-4" sx={{ pb: 6 }}>
-      {/* Top Welcome Header */}
-      <Box sx={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-        <Box sx={{ maxWidth: 640 }}>
+      {/* Top Welcome Header: "Welcome Tayyaba 👋" on Left, "Good Food Brighter Tomorrows" directly in front on Right */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "nowrap",
+          gap: 2,
+          pb: 0.5,
+        }}
+      >
+        {/* Left Side: Welcome Tayyaba and Subtitle */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
             variant="h3"
             sx={{
               fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
               fontWeight: 700,
-              fontSize: { xs: 28, sm: 34, md: 38 },
+              fontSize: { xs: 26, sm: 32, md: 36 },
               color: "#133826",
               letterSpacing: -0.3,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
             }}
           >
             Welcome Tayyaba 👋
@@ -662,167 +668,76 @@ export default function DashboardPage() {
           <Typography
             sx={{
               color: "#57523f",
-              mt: 0.8,
-              fontSize: { xs: 13.5, md: 14.5 },
-              lineHeight: 1.5,
+              mt: 0.5,
+              fontSize: { xs: 13, md: 14 },
+              lineHeight: 1.45,
             }}
           >
             Manage your products, orders, and app content for Nourish Spoon. Keep nourishing lives with wholesome goodness.
           </Typography>
         </Box>
 
-        {/* Top-Right Calligraphy Flourish & Olive Sprig */}
-        <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1.5, pointerEvents: "none" }}>
-          <Typography
-            sx={{
-              fontFamily: 'var(--font-script), "Pinyon Script", cursive',
-              color: "#b08a2e",
-              fontSize: 32,
-              lineHeight: 1,
-              textAlign: "right",
-            }}
-          >
-            Good Food
-            <br />
-            Brighter Tomorrows
-          </Typography>
-          <BotanicalFoliage />
-        </Box>
-      </Box>
-
-      {/* Hero Showcase Banner Card */}
-      <Card
-        sx={{
-          borderRadius: "18px",
-          overflow: "hidden",
-          position: "relative",
-          border: "1px solid #e7ddc2",
-          minHeight: { xs: 200, sm: 220, md: 240 },
-          display: "flex",
-          backgroundColor: "#FAF6EE",
-        }}
-      >
-        {/* Full-width photography base */}
-        <Box
-          component="img"
-          src="/assets/brand/welcome-banner.jpg"
-          alt="Wholesome Goodness for Brighter Days"
-          sx={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "right center",
-          }}
-        />
-
-        {/* Soft cream gradient mask covering the left side */}
+        {/* Right Side: In front of Welcome Tayyaba */}
         <Box
           sx={{
-            position: "absolute",
-            inset: 0,
-            background: {
-              xs: "linear-gradient(90deg, rgba(250,246,238,0.96) 0%, rgba(250,246,238,0.9) 60%, rgba(250,246,238,0.2) 100%)",
-              md: "linear-gradient(90deg, #FAF6EE 0%, #FAF6EE 36%, rgba(250,246,238,0.93) 48%, rgba(250,246,238,0) 68%)",
-            },
-          }}
-        />
-
-        {/* Left Side Promotional Text */}
-        <Box
-          sx={{
-            position: "relative",
-            zIndex: 2,
-            p: { xs: 2.5, sm: 3.5, md: 4 },
-            maxWidth: { xs: "100%", md: 460 },
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}
-        >
-          {/* Small logo */}
-          <Box className="flex items-center gap-1.5 mb-1.5">
-            <SpaOutlined sx={{ color: "#133826", fontSize: 18 }} />
-            <Typography sx={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: "#133826", letterSpacing: 0.5 }}>
-              Nourish Spoon
-            </Typography>
-          </Box>
-
-          {/* Headline */}
-          <Typography
-            sx={{
-              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
-              fontWeight: 800,
-              fontSize: { xs: 24, sm: 30, md: 34 },
-              color: "#133826",
-              lineHeight: 1.15,
-            }}
-          >
-            Wholesome
-            <br />
-            Goodness for
-            <br />
-            Brighter Days
-          </Typography>
-
-          {/* Tagline */}
-          <Typography sx={{ fontSize: 12, color: "#6e6853", fontWeight: 600, my: 1.2 }}>
-            Real Ingredients &nbsp;•&nbsp; Timeless Tradition &nbsp;•&nbsp; Healthier Lives
-          </Typography>
-
-          {/* Button */}
-          <Button
-            component={Link}
-            href="/products"
-            variant="contained"
-            endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
-            sx={{
-              width: "fit-content",
-              borderRadius: 99,
-              backgroundColor: "#133826",
-              color: "#ffffff",
-              fontWeight: 700,
-              fontSize: 12.5,
-              px: 2.2,
-              py: 0.7,
-              textTransform: "none",
-              boxShadow: "none",
-              "&:hover": { backgroundColor: "#0c2419", boxShadow: "none" },
-            }}
-          >
-            Craft Goodness
-          </Button>
-        </Box>
-
-        {/* Right Corner Calligraphy Overlay */}
-        <Box
-          sx={{
-            position: "absolute",
-            right: 28,
-            top: 24,
-            zIndex: 2,
-            display: { xs: "none", lg: "block" },
+            alignItems: "center",
+            gap: 1.2,
+            flexShrink: 0,
             pointerEvents: "none",
           }}
         >
           <Typography
             sx={{
               fontFamily: 'var(--font-script), "Pinyon Script", cursive',
-              color: "#ffffff",
-              textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-              fontSize: 27,
-              lineHeight: 1.15,
+              color: "#b08a2e",
+              fontSize: { xs: 22, sm: 28, md: 34 },
+              lineHeight: 1.1,
               textAlign: "right",
+              whiteSpace: "nowrap",
             }}
           >
-            Nourishing
+            Good Food
             <br />
-            Today for a Better
-            <br />
-            Tomorrow
+            Brighter Tomorrows
           </Typography>
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <BotanicalFoliage />
+          </Box>
         </Box>
+      </Box>
+
+      {/* Hero Showcase Banner Card - 100% matched to master reference design */}
+      <Card
+        component={Link}
+        href="/products"
+        sx={{
+          display: "block",
+          textDecoration: "none",
+          borderRadius: "18px",
+          overflow: "hidden",
+          position: "relative",
+          border: "1px solid #ece4cb",
+          boxShadow: "0 2px 10px rgba(60,50,20,0.06)",
+          transition: "transform .2s ease, box-shadow .2s ease",
+          "&:hover": {
+            transform: "translateY(-1px)",
+            boxShadow: "0 6px 20px rgba(19,56,38,0.1)",
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/assets/brand/hero-banner-showcase.png"
+          alt="Nourish Spoon - Wholesome Goodness for Brighter Days"
+          sx={{
+            width: "100%",
+            height: "auto",
+            display: "block",
+            aspectRatio: { xs: "514/146", md: "1028/292" },
+            objectFit: "cover",
+          }}
+        />
       </Card>
 
       {/* 5 KPI Stat Cards in One Row */}

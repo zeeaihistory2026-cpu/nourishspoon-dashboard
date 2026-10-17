@@ -73,7 +73,7 @@ export default function LoginPage() {
           <Box sx={{ textAlign: "center", mb: 3 }}>
             <Box
               component="img"
-              src="/assets/brand/logo.png"
+              src="/assets/brand/logo-transparent.png"
               alt="Nourish Spoon"
               sx={{ width: 150, mx: "auto", display: "block", mb: 1 }}
             />

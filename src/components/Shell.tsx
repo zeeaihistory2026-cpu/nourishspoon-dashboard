@@ -105,7 +105,7 @@ function SidebarBody({ onNavigate, collapsed = false }: { onNavigate?: () => voi
       <Box sx={{ px: collapsed ? 1 : 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}>
         <Box
           component="img"
-          src="/assets/brand/logo.png"
+          src="/assets/brand/logo-transparent.png"
           alt="Nourish Spoon"
           sx={{ width: collapsed ? 46 : 132, mx: "auto", display: "block" }}
         />
@@ -362,7 +362,7 @@ export default function Shell({
         {/* Page content */}
         <Box
           component="main"
-          sx={{ flex: 1, px: { xs: 2, md: 3.5 }, py: 3, maxWidth: 1720, width: "100%", mx: "auto" }}
+          sx={{ flex: 1, minWidth: 0, px: { xs: 2, md: 3.5 }, py: 3, maxWidth: 1720, width: "100%", mx: "auto" }}
           key={pathname}
         >
           {children}

@@ -32,7 +32,7 @@ function PhonePreview({ n }: { n: AdminNotification }) {
   return (
     <Box sx={{ width: 300, borderRadius: 4, overflow: "hidden", border: "1px solid #e7ddc2", background: "#fffdf7", mx: "auto" }}>
       <Box sx={{ background: "#1b3a28", color: "#fffdf7", px: 2, py: 1, display: "flex", alignItems: "center", gap: 1 }}>
-        <Box component="img" src="/assets/brand/logo.png" alt="" sx={{ height: 22, filter: "brightness(0) invert(1)" }} />
+        <Box component="img" src="/assets/brand/logo-transparent.png" alt="" sx={{ height: 22, filter: "brightness(0) invert(1)" }} />
         <Typography variant="caption" sx={{ fontWeight: 700 }}>Nourish Spoon · now</Typography>
       </Box>
       <Box sx={{ p: 2 }}>

@@ -357,7 +357,7 @@ export default function DashboardPage() {
                 </Button>
               }
             />
-            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" } }}>
+            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(2, 1fr)", "@media (min-width:1660px)": "repeat(4, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(251,246,231,0.94) 0%, rgba(251,246,231,0.6) 48%, rgba(251,246,231,0) 72%)" }} />
@@ -415,7 +415,7 @@ export default function DashboardPage() {
             />
             <Card sx={{ overflow: "hidden" }}>
               <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                       <th style={{ width: 44, padding: "12px 8px 12px 16px" }}><Checkbox size="small" disabled /></th>
@@ -474,7 +474,7 @@ export default function DashboardPage() {
             <SectionHead title="Recent Orders" action={<ViewAll href="/orders" />} />
             <Card sx={{ overflow: "hidden" }}>
               <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                       {["# Order ID", "Customer", "Items", "Amount", "Status", "Date", ""].map((h, i) => (
@@ -508,7 +508,7 @@ export default function DashboardPage() {
             <SectionHead title="Track Order Requests" action={<ViewAll href="/track-orders" />} />
             <Card sx={{ overflow: "hidden" }}>
               <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 540 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                       {["Tracking ID", "Order ID", "Customer", "Status", "Last Update", "Actions"].map((h, i) => (

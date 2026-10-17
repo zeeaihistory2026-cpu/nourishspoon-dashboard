@@ -55,7 +55,7 @@ export interface AdminUser {
   role?: "admin" | "child";
 }
 
-const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
+const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boolean; badge?: string }[] = [
   { href: "/", label: "Dashboard", icon: <HomeOutlined /> },
   { href: "/home-content", label: "Home Content", icon: <ImageOutlined /> },
   { href: "/onboarding", label: "Onboarding", icon: <SpaOutlined /> },
@@ -64,7 +64,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boo
   { href: "/track-orders", label: "Track Order", icon: <LocationOnOutlined /> },
   { href: "/offers-points", label: "Offers & Points", icon: <LocalOfferOutlined /> },
   { href: "/refer-earn", label: "Refer & Earn", icon: <PeopleOutline /> },
-  { href: "/notifications", label: "Notifications", icon: <NotificationsNoneOutlined /> },
+  { href: "/notifications", label: "Notifications", icon: <NotificationsNoneOutlined />, badge: "3" },
   { href: "/payment-methods", label: "Payment Methods", icon: <CreditCardOutlined /> },
   { href: "/delivery-information", label: "Delivery Information", icon: <LocalShippingOutlined /> },
   { href: "/faq", label: "FAQ / Help & Support", icon: <HelpOutline /> },
@@ -78,7 +78,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boo
 const SIDEBAR_W = 232;
 const SIDEBAR_COLLAPSED_W = 72;
 
-function LeafSprig() {
+export function LeafSprig() {
   return (
     <svg width="72" height="96" viewBox="0 0 72 96" fill="none" aria-hidden>
       <path d="M36 92 C 34 60, 38 34, 44 8" stroke="#7d9b6a" strokeWidth="2" strokeLinecap="round" />
@@ -167,6 +167,26 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
                     slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active ? 700 : 600 } } }}
                   />
                 )}
+                {!collapsed && item.badge && (
+                  <Box
+                    sx={{
+                      ml: "auto",
+                      minWidth: 20,
+                      height: 20,
+                      px: 0.6,
+                      borderRadius: 99,
+                      background: "#c9a227",
+                      color: "#fffdf7",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {item.badge}
+                  </Box>
+                )}
               </ListItemButton>
             );
           })}
@@ -174,23 +194,43 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
       </Box>
 
       {!collapsed && (
-        <Box sx={{ px: 2, pb: 2, position: "relative" }}>
-          <Typography
+        <Box sx={{ px: 2, pb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 1 }}>
+            <Typography
+              sx={{
+                fontFamily: '"Pinyon Script", cursive',
+                color: "#b08a2e",
+                fontSize: 21,
+                lineHeight: 1.25,
+              }}
+            >
+              Real
+              <br />
+              Ingredients
+              <br />
+              Happier Lives
+            </Typography>
+            <Box sx={{ opacity: 0.9, flexShrink: 0, mb: -0.5 }}>
+              <LeafSprig />
+            </Box>
+          </Box>
+          <Box
             sx={{
-              fontFamily: '"Pinyon Script", cursive',
-              color: "#b08a2e",
-              fontSize: 21,
-              lineHeight: 1.25,
+              mt: 2,
+              p: 1.8,
+              borderRadius: 2,
+              background: "#fffdf7",
+              border: "1px solid #e7ddc2",
             }}
           >
-            Real
-            <br />
-            Ingredients
-            <br />
-            Real Nutrition
-          </Typography>
-          <Box sx={{ position: "absolute", right: 6, bottom: -6, opacity: 0.9 }}>
-            <LeafSprig />
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 14, color: "#1b3a28", lineHeight: 1.35 }}>
+              Good Food Builds
+              <br />
+              Brighter Days
+            </Typography>
+            <Typography sx={{ fontSize: 11.5, color: "#8d8670", mt: 0.6, lineHeight: 1.45 }}>
+              Keep nourishing lives together.
+            </Typography>
           </Box>
         </Box>
       )}

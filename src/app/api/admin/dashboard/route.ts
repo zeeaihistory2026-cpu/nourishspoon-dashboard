@@ -162,6 +162,23 @@ export async function GET() {
       };
     });
 
+    // Plain (unbranded) food photos for the circular Control Center avatars —
+    // the branded thumbnails carry a name band that a circle crop would cut.
+    const PLAIN_PHOTOS: Record<string, string> = {
+      "classic-panjeeri-with-sugar": "sq-panjeeri-bowl-v2.jpg",
+      "classic-panjeeri-without-sugar": "sq-panjeeri-cook.jpg",
+      "homemade-panjeeri": "sq-panjeeri-jars.jpg",
+      "date-and-nuts-energy-balls": "sq-balls-hands.jpg",
+      "date-nut-balls": "sq-balls-plate.jpg",
+      "daily-nourishment-pack": "sq-combo-spread.jpg",
+      "energy-pack-combo": "sq-combo-ghee.jpg",
+      "family-combo": "sq-combo-ingredients.jpg",
+      "gym-freaks-combo": "sq-combo-hero.jpg",
+      "postpartum-care-combo": "sq-combo-dates.jpg",
+      "power-breakfast-combo": "sq-combo-cook2.jpg",
+    };
+    const ASSET_BASE = "https://nourishspoon-dashboard.vercel.app/assets/products";
+
     // ---- Product control center (featured first, then latest) ----
     const controlProducts = [...products]
       .sort((a, b) => {
@@ -176,16 +193,21 @@ export async function GET() {
         return String(a.name ?? "").localeCompare(String(b.name ?? ""));
       })
       .slice(0, 4)
-      .map((p) => ({
-        id: p.id as string,
-        name: (p.name as string) ?? "",
-        weight: (p.weight as string) ?? "",
-        price: (p.price as number) ?? 0,
-        stock: (p.stock as number) ?? 0,
-        isActive: p.isActive !== false,
-        isFeatured: p.isFeatured === true,
-        image: Array.isArray(p.images) && p.images[0] ? (p.images[0] as string) : ((p.image as string) ?? ""),
-      }));
+      .map((p) => {
+        const branded = Array.isArray(p.images) && p.images[0] ? (p.images[0] as string) : ((p.image as string) ?? "");
+        const plain = PLAIN_PHOTOS[p.id as string];
+        return {
+          id: p.id as string,
+          name: (p.name as string) ?? "",
+          weight: (p.weight as string) ?? "",
+          price: (p.price as number) ?? 0,
+          stock: (p.stock as number) ?? 0,
+          isActive: p.isActive !== false,
+          isFeatured: p.isFeatured === true,
+          image: branded,
+          thumb: plain ? `${ASSET_BASE}/${plain}` : branded,
+        };
+      });
 
     // ---- Weekly sales (last 7 days, real order data only) ----
     const dayLabels: string[] = [];

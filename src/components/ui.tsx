@@ -365,14 +365,14 @@ export function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function Thumb({ src, alt, size = 44 }: { src?: string; alt: string; size?: number }) {
+export function Thumb({ src, alt, size = 44, circle = false }: { src?: string; alt: string; size?: number; circle?: boolean }) {
   if (!src) {
     return (
       <Box
         sx={{
           width: size,
           height: size,
-          borderRadius: 2,
+          borderRadius: circle ? "50%" : 2,
           background: "#f4e9c8",
           display: "flex",
           alignItems: "center",
@@ -395,8 +395,8 @@ export function Thumb({ src, alt, size = 44 }: { src?: string; alt: string; size
       sx={{
         width: size,
         height: size,
-        borderRadius: 2,
-        objectFit: "contain",
+        borderRadius: circle ? "50%" : 2,
+        objectFit: circle ? "cover" : "contain",
         flexShrink: 0,
         border: "1px solid #ece4cb",
         background: "#f8f4e8",

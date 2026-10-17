@@ -297,7 +297,7 @@ export default function DashboardPage() {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "right center",
+            objectPosition: "center 45%",
           }}
         />
         {/* Soft cream fade so the heading sits on a clean area, like the design.
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 letterSpacing: 0.2,
               }}
             >
-              Welcome Back, Admin!
+              Welcome Tayyaba
             </Typography>
             <Typography
               variant="body1"
@@ -395,8 +395,9 @@ export default function DashboardPage() {
               </HomeSectionCard>
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
                 <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(248,244,232,0.35)" }}>
-                  <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, textAlign: "center", lineHeight: 1.3 }}>
+                <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(251,246,231,0.92) 0%, rgba(251,246,231,0.55) 42%, rgba(251,246,231,0) 68%)" }} />
+                <Box sx={{ position: "absolute", left: 10, bottom: 8 }}>
+                  <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, lineHeight: 1.15 }}>
                     Real Ingredients
                     <br />
                     Real Nutrition

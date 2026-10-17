@@ -108,6 +108,7 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               label="Password"
@@ -117,6 +118,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
             <Button
               type="submit"

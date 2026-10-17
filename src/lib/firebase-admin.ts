@@ -12,6 +12,16 @@ import { getMessaging } from "firebase-admin/messaging";
 
 let cached: App | null = null;
 
+/** Thrown when Firebase Admin credentials are missing/misconfigured.
+    Lets API routes distinguish "server misconfigured" (500) from
+    "bad/expired token" (401) instead of masking config errors. */
+export class FirebaseConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FirebaseConfigurationError";
+  }
+}
+
 function readPrivateKey(): string {
   const raw = process.env.FIREBASE_PRIVATE_KEY ?? "";
   // Vercel-style escaped newlines
@@ -30,7 +40,7 @@ export function getAdmin(): App {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = readPrivateKey();
   if (!projectId || !clientEmail || !privateKey) {
-    throw new Error(
+    throw new FirebaseConfigurationError(
       "Firebase Admin is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY."
     );
   }

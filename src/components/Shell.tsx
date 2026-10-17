@@ -109,7 +109,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         />
         <Typography
           sx={{
-            fontFamily: '"Pinyon Script", cursive',
+            fontFamily: 'var(--font-script)',
             color: "#b08a2e",
             fontSize: 17,
             mt: 0.5,
@@ -165,7 +165,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       <Box sx={{ px: 2, pb: 2, position: "relative" }}>
         <Typography
           sx={{
-            fontFamily: '"Pinyon Script", cursive',
+            fontFamily: 'var(--font-script)',
             color: "#b08a2e",
             fontSize: 21,
             lineHeight: 1.25,

@@ -67,7 +67,7 @@ interface DashboardData {
     name: string;
     weight: string;
     price: number;
-    stock: number;
+    stock: number | null;
     isActive: boolean;
     isFeatured: boolean;
     image: string;
@@ -158,7 +158,7 @@ function KpiCard({
           <Box className="flex items-baseline gap-2 flex-wrap">
             <Typography
               className="tnum"
-              sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 29, lineHeight: 1.15 }}
+              sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 29, lineHeight: 1.15 }}
             >
               {value}
             </Typography>
@@ -203,7 +203,7 @@ function SectionHead({
       <Box className="flex items-baseline gap-3 flex-wrap">
         <Typography
           variant="h5"
-          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}
+          sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 21 }}
         >
           {title}
         </Typography>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
             <Typography
               variant="h3"
               sx={{
-                fontFamily: '"Playfair Display", Georgia, serif',
+                fontFamily: 'var(--font-display)',
                 fontWeight: 700,
                 fontSize: { xs: 32, md: 44 },
                 color: "#1b3a28",
@@ -394,7 +394,7 @@ export default function DashboardPage() {
                 right: 24,
                 top: "50%",
                 transform: "translateY(-50%)",
-                fontFamily: '"Pinyon Script", cursive',
+                fontFamily: 'var(--font-script)',
                 color: "#b08a2e",
                 fontSize: 24,
                 lineHeight: 1.45,
@@ -441,7 +441,7 @@ export default function DashboardPage() {
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/panjeeri.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Box sx={{ position: "absolute", left: 10, top: 10, color: "#fffdf7", textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}>
-                  <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
                     Traditional
                     <br />
                     Panjeeri
@@ -471,7 +471,7 @@ export default function DashboardPage() {
               <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
                 <Box component="img" src="/assets/brand/story.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(248,244,232,0.35)" }}>
-                  <Typography sx={{ fontFamily: '"Pinyon Script", cursive', color: "#1b3a28", fontSize: 19, textAlign: "center", lineHeight: 1.3 }}>
+                  <Typography sx={{ fontFamily: 'var(--font-script)', color: "#1b3a28", fontSize: 19, textAlign: "center", lineHeight: 1.3 }}>
                     Real Ingredients
                     <br />
                     Real Nutrition
@@ -517,7 +517,7 @@ export default function DashboardPage() {
                           </Box>
                         </td>
                         <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
-                        <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
+                        <td style={{ padding: "10px 12px" }} className="tnum">{p.stock == null ? "Not tracked" : p.stock}</td>
                         <td style={{ padding: "10px 12px" }}>
                           <StatusChip status={p.isActive ? "active" : "inactive"} />
                         </td>
@@ -626,7 +626,7 @@ export default function DashboardPage() {
       <Box>
         <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <Box className="flex items-baseline gap-3">
-            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
+            <Typography variant="h5" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 21 }}>
               Manage App Screens
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>

@@ -81,7 +81,7 @@ function OffersTab() {
 function PointsTab() {
   const { data: cfgData, loading: cfgLoading, refresh: refreshCfg } = useApi<{ item: any }>("/api/admin/points/config");
   const { data: txData, loading: txLoading, refresh: refreshTx } = useApi<{ items: RewardTransaction[] }>("/api/admin/points/transactions?limit=100");
-  const [form, setForm] = useState({ earnPerRupee: 0, redeemValuePerPoint: 0, minRedeemPoints: 0, welcomeBonus: 0, isActive: true, notes: "" });
+  const [form, setForm] = useState({ spendPerPoint: 0, redeemValuePerPoint: 0, minRedeemPoints: 0, referralReward: 0, isActive: true, notes: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -89,10 +89,10 @@ function PointsTab() {
     if (cfgData?.item) {
       const c = cfgData.item;
       setForm({
-        earnPerRupee: c.earnPerRupee ?? 0,
+        spendPerPoint: c.spendPerPoint ?? 0,
         redeemValuePerPoint: c.redeemValuePerPoint ?? 0,
         minRedeemPoints: c.minRedeemPoints ?? 0,
-        welcomeBonus: c.welcomeBonus ?? 0,
+        referralReward: c.referralReward ?? 0,
         isActive: c.isActive !== false,
         notes: c.notes ?? "",
       });
@@ -148,7 +148,7 @@ function PointsTab() {
   return (
     <Box className="flex flex-col gap-5">
       <Card sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>
+        <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
           Reward Rules
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
@@ -163,14 +163,14 @@ function PointsTab() {
           <CircularProgress size={24} />
         ) : (
           <Box className="grid gap-3" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField size="small" label="Points earned per Rs. 1 spent" type="number" slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              value={form.earnPerRupee} onChange={(e) => setForm({ ...form, earnPerRupee: Number(e.target.value) })} />
+            <TextField size="small" label="Rs. spent to earn one point" type="number" slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              value={form.spendPerPoint} onChange={(e) => setForm({ ...form, spendPerPoint: Number(e.target.value) })} />
             <TextField size="small" label="Rs. value per point on redeem" type="number" slotProps={{ htmlInput: { min: 0, step: "any" } }}
               value={form.redeemValuePerPoint} onChange={(e) => setForm({ ...form, redeemValuePerPoint: Number(e.target.value) })} />
             <TextField size="small" label="Minimum points to redeem" type="number" slotProps={{ htmlInput: { min: 0 } }}
               value={form.minRedeemPoints} onChange={(e) => setForm({ ...form, minRedeemPoints: Number(e.target.value) })} />
-            <TextField size="small" label="Welcome bonus points" type="number" slotProps={{ htmlInput: { min: 0 } }}
-              value={form.welcomeBonus} onChange={(e) => setForm({ ...form, welcomeBonus: Number(e.target.value) })} />
+            <TextField size="small" label="Referrer reward points" type="number" slotProps={{ htmlInput: { min: 0 } }}
+              value={form.referralReward} onChange={(e) => setForm({ ...form, referralReward: Number(e.target.value) })} />
             <TextField size="small" label="Notes" multiline rows={2} value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })} sx={{ gridColumn: { sm: "1 / -1" } }} />
             <Box sx={{ gridColumn: { sm: "1 / -1" } }} className="flex justify-end">
@@ -183,7 +183,7 @@ function PointsTab() {
       </Card>
 
       <Box>
-        <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>
+        <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
           Points Ledger
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>

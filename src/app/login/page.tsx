@@ -78,13 +78,13 @@ export default function LoginPage() {
               sx={{ width: 150, mx: "auto", display: "block", mb: 1 }}
             />
             <Typography
-              sx={{ fontFamily: '"Pinyon Script", cursive', color: "#b08a2e", fontSize: 19 }}
+              sx={{ fontFamily: 'var(--font-script)', color: "#b08a2e", fontSize: 19 }}
             >
               Crafted with Love
             </Typography>
             <Typography
               variant="h5"
-              sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mt: 1.5 }}
+              sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mt: 1.5 }}
             >
               Admin Dashboard
             </Typography>

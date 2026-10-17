@@ -1,5 +1,5 @@
 export function rs(n: number | undefined | null): string {
-  if (n === undefined || n === null || Number.isNaN(n)) return "Rs. 0";
+  if (n === undefined || n === null || Number.isNaN(n)) return "Awaiting quote";
   return "Rs. " + Math.round(n).toLocaleString("en-PK");
 }
 

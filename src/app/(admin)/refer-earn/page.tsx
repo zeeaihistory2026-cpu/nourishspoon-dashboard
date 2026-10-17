@@ -54,7 +54,7 @@ function CorrectDialog({ row, onClose, onSaved }: { row: Referral | null; onClos
 
   return (
     <Dialog open={Boolean(row)} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ fontFamily: '"Playfair Display", Georgia, serif' }}>Correct reward state</DialogTitle>
+      <DialogTitle sx={{ fontFamily: 'var(--font-display)' }}>Correct reward state</DialogTitle>
       <DialogContent className="flex flex-col gap-3" sx={{ pt: 1 }}>
         {error && <Typography variant="body2" sx={{ color: "#c0392b" }}>{error}</Typography>}
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -169,7 +169,7 @@ function Page() {
       <PageHeader title="Refer & Earn" subtitle="Referral program copy, rewards and referral records." />
 
       <Card sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>
+        <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
           Program Settings
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
@@ -198,7 +198,7 @@ function Page() {
         )}
       </Card>
 
-      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>
+      <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
         Referral Records
       </Typography>
       <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>

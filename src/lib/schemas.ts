@@ -6,20 +6,22 @@ export const productSchema = z.object({
   description: z.string().max(5000).default(""),
   categoryId: z.string().min(1, "Category is required"),
   categoryName: z.string().min(1),
-  price: z.number().min(0, "Price must be 0 or more"),
+  price: z.number().int().min(1, "Price must be greater than zero"),
   compareAtPrice: z.number().min(0).optional().nullable(),
   variants: z
     .array(
       z.object({
+        id: z.string().optional(), stock: z.number().int().min(0).nullable().optional(), active: z.boolean().optional(),
         label: z.string().min(1),
-        price: z.number().min(0),
+        price: z.number().int().min(1),
         compareAtPrice: z.number().min(0).optional().nullable(),
         per100g: z.string().optional(),
       })
     )
     .default([]),
   weight: z.string().max(40).default(""),
-  stock: z.number().int().min(0).default(0),
+  stock: z.number().int().min(0).nullable().default(null),
+  inventoryMode: z.enum(["aggregate", "per_variant"]).optional(),
   images: z.array(z.string().url("Must be a valid URL")).default([]),
   ingredients: z.array(z.object({ name: z.string().min(1), emoji: z.string().optional(), imageUrl: z.string().optional() })).default([]),
   benefits: z
@@ -59,11 +61,12 @@ export const trackingUpdateSchema = z.object({
 });
 
 export const couponSchema = z.object({
-  code: z.string().min(2, "Code is required").max(30),
+  code: z.string().regex(/^[A-Za-z0-9_-]{4,24}$/, "Use 4-24 letters, digits, dashes or underscores"),
   description: z.string().max(300).default(""),
   discountType: z.enum(["percent", "fixed"]),
-  value: z.number().min(0, "Value must be 0 or more"),
-  minSubtotal: z.number().min(0).optional().nullable(),
+  value: z.number().int().min(1, "Value must be a positive whole number"),
+  minSubtotal: z.number().int().min(0).optional().nullable(),
+  maximumDiscount: z.number().int().min(1).optional().nullable(),
   expiresAt: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
 });

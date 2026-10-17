@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,8 +9,6 @@ import {
   Card,
   CardContent,
   Checkbox,
-  Select,
-  MenuItem,
   Switch,
   Typography,
 } from "@mui/material";
@@ -80,6 +79,16 @@ interface DashboardData {
     revenue: number;
     orders: number;
   }[];
+  sales?: {
+    [K in "weekly" | "monthly" | "quarterly" | "yearly"]: {
+      total: number;
+      orders: number;
+      delta: number;
+      prevLabel: string;
+      rangeLabel: string;
+      points: { label: string; revenue: number; orders: number }[];
+    };
+  };
 }
 
 /* ------------------------------- sparkline ------------------------------- */
@@ -300,23 +309,23 @@ function HomeSectionCard({
   );
 }
 
-/* ------------------------------- weekly line chart ------------------------------- */
+/* ------------------------------- sales line chart ------------------------------- */
 
-function WeeklyLineChart({ days }: { days: DashboardData["weeklySales"] }) {
+function SalesChart({ points }: { points: { label: string; revenue: number; orders: number }[] }) {
   const W = 640;
   const H = 170;
   const PAD_L = 34;
   const PAD_R = 12;
   const PAD_T = 14;
   const PAD_B = 28;
-  const maxRev = Math.max(0, ...days.map((d) => d.revenue));
+  const maxRev = Math.max(0, ...points.map((d) => d.revenue));
   const maxY = Math.max(4, maxRev);
   const steps = 4;
-  const x = (i: number) => PAD_L + (i / Math.max(1, days.length - 1)) * (W - PAD_L - PAD_R);
+  const x = (i: number) => PAD_L + (i / Math.max(1, points.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v: number) => PAD_T + (1 - v / maxY) * (H - PAD_T - PAD_B);
-  const line = days.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.revenue).toFixed(1)}`).join(" ");
+  const line = points.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.revenue).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="Weekly sales line chart">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="Sales line chart">
       {Array.from({ length: steps + 1 }).map((_, s) => {
         const v = (maxY / steps) * s;
         const yy = y(v);
@@ -329,9 +338,9 @@ function WeeklyLineChart({ days }: { days: DashboardData["weeklySales"] }) {
           </g>
         );
       })}
-      {days.length > 0 && <path d={line} fill="none" stroke="#1b3a28" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-      {days.map((d, i) => (
-        <g key={d.date}>
+      {points.length > 0 && <path d={line} fill="none" stroke="#1b3a28" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+      {points.map((d, i) => (
+        <g key={i}>
           <circle cx={x(i)} cy={y(d.revenue)} r="4.5" fill="#fffdf7" stroke="#1b3a28" strokeWidth="2.5" />
           <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill="#57523f" fontWeight={600}>
             {d.label}
@@ -378,15 +387,23 @@ export default function DashboardPage() {
     totalOrders: 0, ordersDelta: 0, revenue: 0, revenueDelta: 0, activeOffers: 0, offersDelta: 0,
   };
 
+  const [salesRange, setSalesRange] = useState<"weekly" | "monthly" | "quarterly" | "yearly">("weekly");
+
   // Weekly trend for the KPI sparklines (real order data; gentle curve when no data yet).
   const weekRev = (data?.weeklySales ?? []).map((d) => d.revenue);
   const weekOrders = (data?.weeklySales ?? []).map((d) => d.orders);
   const trendRev = weekRev.length && Math.max(...weekRev) > 0 ? weekRev : [2, 3, 2.4, 3.8, 3.2, 4.6, 4];
   const trendOrders = weekOrders.length && Math.max(...weekOrders) > 0 ? weekOrders : [1, 2, 1.5, 2.6, 2.2, 3.2, 2.8];
 
-  const days = data?.weeklySales ?? [];
-  const weekTotal = days.reduce((s, d) => s + d.revenue, 0);
-  const weekOrderCount = days.reduce((s, d) => s + d.orders, 0);
+  // Selected sales range (falls back to the weekly series until the API returns `sales`).
+  const salesData = data?.sales?.[salesRange] ?? {
+    total: (data?.weeklySales ?? []).reduce((s, d) => s + d.revenue, 0),
+    orders: (data?.weeklySales ?? []).reduce((s, d) => s + d.orders, 0),
+    delta: 0,
+    prevLabel: "vs previous week",
+    rangeLabel: "last 7 days",
+    points: (data?.weeklySales ?? []).map((d) => ({ label: d.label, revenue: d.revenue, orders: d.orders })),
+  };
 
   return (
     <Box className="flex flex-col gap-5">
@@ -439,83 +456,26 @@ export default function DashboardPage() {
         </Box>
       </Box>
 
-      {/* Hero banner — photo + headline + CTA + script */}
+      {/* Hero banner — exact composed banner (photo + headline + CTA + script baked in) */}
       <Card
+        component={Link}
+        href="/products"
         sx={{
           borderRadius: 4,
           overflow: "hidden",
           position: "relative",
           border: "1px solid #e7ddc2",
-          minHeight: { xs: 220, md: 252 },
+          display: "block",
+          textDecoration: "none",
+          cursor: "pointer",
         }}
       >
         <Box
           component="img"
-          src="/assets/brand/welcome-banner.jpg"
-          alt="Nourish Spoon wholesome products"
-          sx={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center 42%",
-          }}
+          src="/assets/brand/banner-exact.jpg"
+          alt="Nourish Spoon — Wholesome Goodness for Brighter Days"
+          sx={{ display: "block", width: "100%", height: "auto" }}
         />
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(90deg, rgba(251,246,231,0.96) 0%, rgba(251,246,231,0.88) 34%, rgba(251,246,231,0.25) 62%, rgba(251,246,231,0) 78%)",
-          }}
-        />
-        <Box sx={{ position: "relative", px: { xs: 2.5, md: 4 }, py: { xs: 2.5, md: 3 }, maxWidth: 520, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1.2, minHeight: { xs: 220, md: 252 }, justifyContent: "center" }}>
-          <Box component="img" src="/assets/brand/logo-transparent.png" alt="Nourish Spoon" sx={{ width: 108, display: "block" }} />
-          <Typography
-            sx={{
-              fontFamily: '"Playfair Display", Georgia, serif',
-              fontWeight: 800,
-              fontSize: { xs: 26, md: 34 },
-              lineHeight: 1.12,
-              color: "#1b3a28",
-            }}
-          >
-            Wholesome Goodness for
-            <br />
-            Brighter Days
-          </Typography>
-          <Typography sx={{ fontSize: 12.5, color: "#57523f", fontWeight: 600, letterSpacing: 0.2 }}>
-            Real Ingredients &nbsp;·&nbsp; Timeless Tradition &nbsp;·&nbsp; Healthier Lives
-          </Typography>
-          <Button
-            variant="contained"
-            endIcon={<ArrowForwardIcon sx={{ fontSize: 16 }} />}
-            onClick={() => router.push("/products")}
-            sx={{ mt: 0.5, borderRadius: 99, px: 2.6, py: 1, fontSize: 13, fontWeight: 700, textTransform: "none" }}
-          >
-            Craft Goodness
-          </Button>
-        </Box>
-        <Typography
-          sx={{
-            position: "absolute",
-            right: { xs: 14, md: 30 },
-            top: { xs: 12, md: 22 },
-            fontFamily: '"Pinyon Script", cursive',
-            color: "#fffdf7",
-            fontSize: { xs: 20, md: 28 },
-            lineHeight: 1.1,
-            textAlign: "right",
-            textShadow: "0 1px 8px rgba(27,58,40,0.55)",
-            display: { xs: "none", sm: "block" },
-          }}
-        >
-          Nourishing
-          <br />
-          Today for a Better
-          <br />
-          Tomorrow
-        </Typography>
       </Card>
 
       {/* KPI cards */}
@@ -592,13 +552,13 @@ export default function DashboardPage() {
           </Box>
         </Box>
 
-        <Box className="flex flex-col gap-5 min-w-0">
-          {/* Recent Orders */}
-          <Box>
+        <Box sx={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 2.5, minWidth: 0, height: "100%" }}>
+          {/* Recent Orders — stretches to share the column height with Track Order Requests */}
+          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <SectionHead title="Recent Orders" action={<ViewAll href="/orders" />} />
-            <Card sx={{ overflow: "hidden" }}>
-              <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
+            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
+              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560, height: "100%" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                       {["# Order ID", "Customer", "Items", "Amount", "Status"].map((h, i) => (
@@ -618,7 +578,7 @@ export default function DashboardPage() {
                     ))}
                     {!(data?.recentOrders ?? []).length && (
                       <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center" }}>
+                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
                           {loading ? (
                             <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
                           ) : (
@@ -639,12 +599,12 @@ export default function DashboardPage() {
             </Card>
           </Box>
 
-          {/* Track Order Requests */}
-          <Box>
+          {/* Track Order Requests — equal height to Recent Orders */}
+          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <SectionHead title="Track Order Requests" action={<ViewAll href="/track-orders" />} />
-            <Card sx={{ overflow: "hidden" }}>
-              <Box className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 540 }}>
+            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
+              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 540, height: "100%" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                       {["Tracking ID", "Order ID", "Customer", "Status", "Last Update"].map((h, i) => (
@@ -664,7 +624,7 @@ export default function DashboardPage() {
                     ))}
                     {!(data?.trackRequests ?? []).length && (
                       <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center" }}>
+                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
                           {loading ? (
                             <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
                           ) : (
@@ -687,41 +647,58 @@ export default function DashboardPage() {
         </Box>
       </Box>
 
-      {/* Weekly Sales — line chart + decorative panel */}
+      {/* Sales — line chart with Weekly / Monthly / Quarterly / Yearly tabs */}
       <Box>
-        <SectionHead
-          title="Weekly Sales"
-          action={
-            <Select
-              value="7"
-              size="small"
-              sx={{ borderRadius: 99, fontSize: 12.5, fontWeight: 700, background: "#fffdf7", "& .MuiSelect-select": { py: 0.8, pr: 3.5 } }}
-              onChange={() => {}}
-            >
-              <MenuItem value="7">Last 7 Days</MenuItem>
-            </Select>
-          }
-        />
+        <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <Box className="flex items-baseline gap-3 flex-wrap">
+            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
+              Sales
+            </Typography>
+          </Box>
+          <Box className="flex items-center gap-1.5">
+            {(["weekly", "monthly", "quarterly", "yearly"] as const).map((r) => (
+              <Button
+                key={r}
+                size="small"
+                onClick={() => setSalesRange(r)}
+                sx={{
+                  borderRadius: 99,
+                  px: 1.8,
+                  py: 0.6,
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  textTransform: "capitalize",
+                  background: salesRange === r ? "#1b3a28" : "#fffdf7",
+                  color: salesRange === r ? "#fffdf7" : "#57523f",
+                  border: "1px solid #e7ddc2",
+                  "&:hover": { background: salesRange === r ? "#1b3a28" : "#f7ecd0" },
+                }}
+              >
+                {r}
+              </Button>
+            ))}
+          </Box>
+        </Box>
         <Card sx={{ p: { xs: 2, md: 2.5 }, overflow: "hidden" }}>
           <Box className="flex gap-4" sx={{ flexDirection: { xs: "column", md: "row" } }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box className="flex items-baseline gap-2 flex-wrap">
                 <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 26, lineHeight: 1.1 }}>
-                  {rs(weekTotal)}
+                  {rs(salesData.total)}
                 </Typography>
                 <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-                  {weekOrderCount} order{weekOrderCount === 1 ? "" : "s"} · last 7 days
+                  {salesData.orders} order{salesData.orders === 1 ? "" : "s"} · {salesData.rangeLabel}
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: "#2e7d4f", background: "#e9f5ec", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
-                  <TrendingUpIcon sx={{ fontSize: 13 }} /> 0% <span style={{ fontWeight: 600, color: "#57523f" }}>vs previous week</span>
+                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: salesData.delta >= 0 ? "#2e7d4f" : "#c0392b", background: salesData.delta >= 0 ? "#e9f5ec" : "#fbe9e7", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
+                  {salesData.delta >= 0 ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />} {salesData.delta >= 0 ? "+" : ""}{salesData.delta}% <span style={{ fontWeight: 600, color: "#57523f" }}>{salesData.prevLabel}</span>
                 </Typography>
               </Box>
               <Box sx={{ mt: 2 }}>
-                <WeeklyLineChart days={days} />
+                <SalesChart points={salesData.points} />
               </Box>
-              {weekTotal === 0 && !loading && (
+              {salesData.total === 0 && !loading && (
                 <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 1, textAlign: "center" }}>
-                  No orders this week yet — new orders will appear here automatically.
+                  No sales in this period yet — new orders will appear here automatically.
                 </Typography>
               )}
             </Box>

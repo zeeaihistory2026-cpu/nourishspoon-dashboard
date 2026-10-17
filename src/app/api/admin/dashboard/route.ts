@@ -209,7 +209,10 @@ export async function GET() {
         };
       });
 
-    // ---- Weekly sales (last 7 days, real order data only) ----
+    // ---- Sales series (real order data only) ----
+    // Weekly: last 7 days. Monthly: last 12 months. Quarterly: last 8 quarters.
+    // Yearly: last 5 years. Each range also carries the previous-period total
+    // so the card can show an honest week/month/quarter/year-over-year delta.
     const dayLabels: string[] = [];
     const weeklySales: { date: string; label: string; revenue: number; orders: number }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -226,6 +229,101 @@ export async function GET() {
         orders: dayOrders.length,
       });
     }
+    const prevWeekTotal = orders
+      .filter((o) => o.t >= now - 14 * 24 * 60 * 60 * 1000 && o.t < now - 7 * 24 * 60 * 60 * 1000 && valid(o))
+      .reduce((s, o) => s + (o.total ?? 0), 0);
+
+    const monthPoints: { label: string; revenue: number; orders: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      d.setMonth(d.getMonth() - i);
+      const next = new Date(d);
+      next.setMonth(next.getMonth() + 1);
+      const mOrders = orders.filter((o) => o.t >= d.getTime() && o.t < next.getTime() && valid(o));
+      monthPoints.push({
+        label: `${d.toLocaleDateString("en-US", { month: "short" })} ${String(d.getFullYear()).slice(2)}`,
+        revenue: Math.round(mOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
+        orders: mOrders.length,
+      });
+    }
+    const prev12MonthsTotal = orders
+      .filter((o) => {
+        const d = new Date(now);
+        d.setDate(1);
+        d.setHours(0, 0, 0, 0);
+        d.setMonth(d.getMonth() - 24);
+        const end = new Date(now);
+        end.setDate(1);
+        end.setHours(0, 0, 0, 0);
+        end.setMonth(end.getMonth() - 12);
+        return o.t >= d.getTime() && o.t < end.getTime() && valid(o);
+      })
+      .reduce((s, o) => s + (o.total ?? 0), 0);
+
+    const quarterPoints: { label: string; revenue: number; orders: number }[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(now);
+      const q = Math.floor(d.getMonth() / 3) - i;
+      const year = d.getFullYear() + Math.floor(q / 4);
+      const qIdx = ((q % 4) + 4) % 4;
+      const start = new Date(year, qIdx * 3, 1);
+      const end = new Date(year, qIdx * 3 + 3, 1);
+      const qOrders = orders.filter((o) => o.t >= start.getTime() && o.t < end.getTime() && valid(o));
+      quarterPoints.push({
+        label: `Q${qIdx + 1} ${String(year).slice(2)}`,
+        revenue: Math.round(qOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
+        orders: qOrders.length,
+      });
+    }
+    const prev8QuartersTotal = orders
+      .filter((o) => {
+        const d = new Date(now);
+        const q = Math.floor(d.getMonth() / 3) - 16;
+        const year = d.getFullYear() + Math.floor(q / 4);
+        const qIdx = ((q % 4) + 4) % 4;
+        const start = new Date(year, qIdx * 3, 1);
+        const end = new Date(now);
+        const qEnd = Math.floor(end.getMonth() / 3) - 8;
+        const qEndYear = end.getFullYear() + Math.floor(qEnd / 4);
+        const qEndIdx = ((qEnd % 4) + 4) % 4;
+        const endBound = new Date(qEndYear, qEndIdx * 3, 1);
+        return o.t >= start.getTime() && o.t < endBound.getTime() && valid(o);
+      })
+      .reduce((s, o) => s + (o.total ?? 0), 0);
+
+    const yearPoints: { label: string; revenue: number; orders: number }[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const year = new Date(now).getFullYear() - i;
+      const start = new Date(year, 0, 1);
+      const end = new Date(year + 1, 0, 1);
+      const yOrders = orders.filter((o) => o.t >= start.getTime() && o.t < end.getTime() && valid(o));
+      yearPoints.push({
+        label: String(year),
+        revenue: Math.round(yOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
+        orders: yOrders.length,
+      });
+    }
+    const prev5YearsTotal = orders
+      .filter((o) => {
+        const year = new Date(now).getFullYear() - 10;
+        const start = new Date(year, 0, 1);
+        const end = new Date(new Date(now).getFullYear() - 5, 0, 1);
+        return o.t >= start.getTime() && o.t < end.getTime() && valid(o);
+      })
+      .reduce((s, o) => s + (o.total ?? 0), 0);
+
+    const sum = (pts: { revenue: number; orders: number }[]) => ({
+      total: pts.reduce((s, p) => s + p.revenue, 0),
+      orders: pts.reduce((s, p) => s + p.orders, 0),
+    });
+    const sales = {
+      weekly: { ...sum(weeklySales), delta: pctDelta(sum(weeklySales).total, prevWeekTotal), prevLabel: "vs previous week", rangeLabel: "last 7 days", points: weeklySales },
+      monthly: { ...sum(monthPoints), delta: pctDelta(sum(monthPoints).total, prev12MonthsTotal), prevLabel: "vs previous 12 months", rangeLabel: "last 12 months", points: monthPoints },
+      quarterly: { ...sum(quarterPoints), delta: pctDelta(sum(quarterPoints).total, prev8QuartersTotal), prevLabel: "vs previous 8 quarters", rangeLabel: "last 8 quarters", points: quarterPoints },
+      yearly: { ...sum(yearPoints), delta: pctDelta(sum(yearPoints).total, prev5YearsTotal), prevLabel: "vs previous 5 years", rangeLabel: "last 5 years", points: yearPoints },
+    };
 
     return Response.json({
       stats,
@@ -233,6 +331,7 @@ export async function GET() {
       trackRequests,
       controlProducts,
       weeklySales,
+      sales,
     });
   } catch (err) {
     return authErrorResponse(err);

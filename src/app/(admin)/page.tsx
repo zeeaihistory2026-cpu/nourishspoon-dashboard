@@ -734,7 +734,8 @@ export default function DashboardPage() {
             width: "100%",
             height: "auto",
             display: "block",
-            aspectRatio: "1376/768",
+            aspectRatio: { xs: "514/146", md: "1028/292" },
+            maxHeight: { xs: 180, sm: 240, md: 280 },
             objectFit: "cover",
           }}
         />

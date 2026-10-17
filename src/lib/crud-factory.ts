@@ -134,8 +134,14 @@ export function crudItemRoutes(opts: CrudOptions) {
       const { id } = await ctx.params;
       const body = await req.json();
       const parsed = (await updateSchema.parseAsync(body)) as Record<string, unknown>;
-      // Strip undefined so partial updates don't null fields
-      for (const k of Object.keys(parsed)) if (parsed[k] === undefined) delete parsed[k];
+      // CRITICAL: Zod fills .default() values for keys the client did NOT send
+      // (e.g. PATCH {isActive} would parse to {isActive, description: "",
+      // variants: [], stock: 0, isFeatured: false, ...}). Strip every key that
+      // was not in the request body, or a one-field toggle wipes the whole doc.
+      // Strip undefined so partial updates don't null fields.
+      for (const k of Object.keys(parsed)) {
+        if (!(k in body) || parsed[k] === undefined) delete parsed[k];
+      }
       stamp(parsed, { uid: admin.uid, email: (admin.email as string) ?? undefined }, false);
       const ref = adminDb().collection(opts.collection).doc(id);
       const snap = await ref.get();

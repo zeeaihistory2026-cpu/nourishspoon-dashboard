@@ -41,6 +41,7 @@ import FavoriteBorderOutlined from "@mui/icons-material/FavoriteBorderOutlined";
 import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SearchIcon from "@mui/icons-material/SearchOutlined";
 import MenuIcon from "@mui/icons-material/MenuOutlined";
+import MenuOpenIcon from "@mui/icons-material/MenuOpenOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import PhoneIphoneOutlined from "@mui/icons-material/PhoneIphoneOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMoreOutlined";
@@ -74,6 +75,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode; badge?: string 
 ];
 
 const SIDEBAR_W = 240;
+const SIDEBAR_COLLAPSED_W = 74;
 
 export function LeafSprig() {
   return (
@@ -102,36 +104,60 @@ export function LeafSprig() {
   );
 }
 
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarBody({
+  onNavigate,
+  collapsed = false,
+  role,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  role?: "admin" | "child";
+}) {
   const pathname = usePathname();
+  const items = NAV.filter((item) => !(item as any).adminOnly || role === "admin");
 
   return (
-    <Box className="h-full flex flex-col" sx={{ background: "#f8f5ea", borderRight: "1px solid #e7ddc2", position: "relative" }}>
+    <Box
+      className="h-full flex flex-col"
+      sx={{
+        background: "#f8f5ea",
+        borderRight: "1px solid #e7ddc2",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {/* Brand logo */}
-      <Box sx={{ px: 2.5, pt: 2.8, pb: 2, textAlign: "center" }}>
+      <Box sx={{ px: collapsed ? 1 : 2.5, pt: 2.8, pb: 2, textAlign: "center" }}>
         <Box
           component="img"
           src="/assets/brand/logo-transparent.png"
           alt="Nourish Spoon"
-          sx={{ width: 138, mx: "auto", display: "block" }}
-        />
-        <Typography
           sx={{
-            fontFamily: 'var(--font-script), "Pinyon Script", cursive',
-            color: "#b08a2e",
-            fontSize: 18,
-            mt: 0.5,
-            lineHeight: 1,
+            width: collapsed ? 44 : 138,
+            mx: "auto",
+            display: "block",
+            transition: "width 0.2s ease",
           }}
-        >
-          Crafted with Love
-        </Typography>
+        />
+        {!collapsed && (
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-script), "Pinyon Script", cursive',
+              color: "#b08a2e",
+              fontSize: 18,
+              mt: 0.5,
+              lineHeight: 1,
+            }}
+          >
+            Crafted with Love
+          </Typography>
+        )}
       </Box>
 
       {/* Nav List */}
-      <Box className="flex-1 overflow-y-auto" sx={{ px: 1.6, pb: 1.5 }}>
+      <Box className="flex-1 overflow-y-auto" sx={{ px: collapsed ? 1 : 1.6, pb: 1.5 }}>
         <List disablePadding>
-          {NAV.map((item) => {
+          {items.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
@@ -140,11 +166,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 component={Link}
                 href={item.href}
                 onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
                 sx={{
                   borderRadius: "10px",
                   mb: 0.3,
                   py: 0.9,
-                  px: 1.6,
+                  px: collapsed ? 0 : 1.6,
+                  justifyContent: collapsed ? "center" : "flex-start",
                   color: active ? "#ffffff" : "#3d3a2c",
                   backgroundColor: active ? "#133826" : "transparent",
                   "&:hover": {
@@ -154,26 +182,30 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 32,
+                    minWidth: collapsed ? 0 : 32,
+                    justifyContent: "center",
                     color: active ? "#ffffff" : "#57523f",
                     "& svg": { fontSize: 19 },
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  slotProps={{
-                    primary: {
-                      sx: {
-                        fontSize: 13,
-                        fontWeight: active ? 700 : 500,
-                        color: active ? "#ffffff" : "#3d3a2c",
+                {!collapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: 13,
+                          fontWeight: active ? 700 : 500,
+                          color: active ? "#ffffff" : "#3d3a2c",
+                          whiteSpace: "nowrap",
+                        },
                       },
-                    },
-                  }}
-                />
-                {item.badge && (
+                    }}
+                  />
+                )}
+                {!collapsed && item.badge && (
                   <Box
                     sx={{
                       minWidth: 19,
@@ -187,6 +219,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      ml: "auto",
                     }}
                   >
                     {item.badge}
@@ -199,53 +232,55 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       </Box>
 
       {/* Sidebar bottom foliage & quote card */}
-      <Box sx={{ px: 2, pb: 2.2, pt: 1, position: "relative" }}>
-        <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", mb: 1.5, px: 0.5 }}>
-          <Typography
+      {!collapsed && (
+        <Box sx={{ px: 2, pb: 2.2, pt: 1, position: "relative" }}>
+          <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", mb: 1.5, px: 0.5 }}>
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-script), "Pinyon Script", cursive',
+                color: "#b08a2e",
+                fontSize: 22,
+                lineHeight: 1.2,
+              }}
+            >
+              Real Ingredients
+              <br />
+              Happier Lives
+            </Typography>
+            <Box sx={{ opacity: 0.85, flexShrink: 0, transform: "scale(0.85)", originX: "right" }}>
+              <LeafSprig />
+            </Box>
+          </Box>
+
+          {/* Card: Good Food Builds Brighter Days */}
+          <Box
             sx={{
-              fontFamily: 'var(--font-script), "Pinyon Script", cursive',
-              color: "#b08a2e",
-              fontSize: 22,
-              lineHeight: 1.2,
+              p: 1.6,
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #e7ddc2",
+              boxShadow: "0 2px 8px rgba(60,50,20,0.04)",
             }}
           >
-            Real Ingredients
-            <br />
-            Happier Lives
-          </Typography>
-          <Box sx={{ opacity: 0.85, flexShrink: 0, transform: "scale(0.85)", originX: "right" }}>
-            <LeafSprig />
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
+                fontWeight: 700,
+                fontSize: 13.5,
+                color: "#133826",
+                lineHeight: 1.3,
+              }}
+            >
+              Good Food Builds
+              <br />
+              Brighter Days
+            </Typography>
+            <Typography sx={{ fontSize: 11, color: "#8d8670", mt: 0.5, lineHeight: 1.35 }}>
+              Keep nourishing lives together.
+            </Typography>
           </Box>
         </Box>
-
-        {/* Card: Good Food Builds Brighter Days */}
-        <Box
-          sx={{
-            p: 1.6,
-            borderRadius: "14px",
-            background: "#ffffff",
-            border: "1px solid #e7ddc2",
-            boxShadow: "0 2px 8px rgba(60,50,20,0.04)",
-          }}
-        >
-          <Typography
-            sx={{
-              fontFamily: 'var(--font-display), "Playfair Display", Georgia, serif',
-              fontWeight: 700,
-              fontSize: 13.5,
-              color: "#133826",
-              lineHeight: 1.3,
-            }}
-          >
-            Good Food Builds
-            <br />
-            Brighter Days
-          </Typography>
-          <Typography sx={{ fontSize: 11, color: "#8d8670", mt: 0.5, lineHeight: 1.35 }}>
-            Keep nourishing lives together.
-          </Typography>
-        </Box>
-      </Box>
+      )}
     </Box>
   );
 }
@@ -261,6 +296,7 @@ export default function Shell({
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width:1100px)");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [query, setQuery] = useState("");
 
@@ -297,15 +333,17 @@ export default function Shell({
       {isDesktop ? (
         <Box
           sx={{
-            width: SIDEBAR_W,
+            width: collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W,
             flexShrink: 0,
             position: "sticky",
             top: 0,
             height: "100vh",
             zIndex: 100,
+            transition: "width 0.25s ease",
+            overflow: "hidden",
           }}
         >
-          <SidebarBody />
+          <SidebarBody collapsed={collapsed} role={admin?.role} />
         </Box>
       ) : (
         <Drawer
@@ -314,7 +352,7 @@ export default function Shell({
           ModalProps={{ keepMounted: true }}
           sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_W, borderRight: "none" } }}
         >
-          <SidebarBody onNavigate={() => setMobileOpen(false)} />
+          <SidebarBody onNavigate={() => setMobileOpen(false)} role={admin?.role} />
         </Drawer>
       )}
 
@@ -333,20 +371,28 @@ export default function Shell({
           }}
         >
           <Toolbar sx={{ gap: 2, py: 1, px: { xs: 2, md: 3.5 } }}>
-            {!isDesktop && (
-              <IconButton
-                onClick={() => setMobileOpen(true)}
-                aria-label="Open menu"
-                sx={{
-                  border: "1px solid #e7ddc2",
-                  borderRadius: "10px",
-                  p: 0.8,
-                  backgroundColor: "#ffffff",
-                }}
-              >
+            {/* Sidebar toggle button (collapses on desktop, opens drawer on mobile) */}
+            <IconButton
+              onClick={() => {
+                if (isDesktop) setCollapsed((c) => !c);
+                else setMobileOpen(true);
+              }}
+              aria-label={isDesktop ? (collapsed ? "Expand sidebar" : "Collapse sidebar") : "Open menu"}
+              sx={{
+                border: "1px solid #e7ddc2",
+                borderRadius: "10px",
+                p: 0.8,
+                backgroundColor: "#ffffff",
+                color: "#2c2a21",
+                "&:hover": { backgroundColor: "#f4eedb" },
+              }}
+            >
+              {isDesktop && !collapsed ? (
+                <MenuOpenIcon sx={{ fontSize: 20 }} />
+              ) : (
                 <MenuIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            )}
+              )}
+            </IconButton>
 
             {/* Search Bar with ⌘ K */}
             <Box component="form" onSubmit={submitSearch} sx={{ flex: 1, maxWidth: 520 }}>

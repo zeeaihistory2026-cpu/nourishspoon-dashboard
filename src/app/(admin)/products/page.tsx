@@ -116,6 +116,50 @@ function MultiImage({ value, onChange }: { value: string[]; onChange: (v: string
   );
 }
 
+type RawVariant = Record<string, unknown>;
+
+// App-seeded products store variants as {weight, regular_price, sale_price, ...}
+// while the form edits {label, price, compareAtPrice}. Translate both ways so
+// the form shows app variants correctly and saving never corrupts their shape.
+function toFormVariants(variants: unknown): FormValues["variants"] {
+  if (!Array.isArray(variants)) return [];
+  return variants.map((v) => {
+    const o = (v ?? {}) as RawVariant;
+    return {
+      label: (o.label as string) ?? (o.weight as string) ?? "",
+      price: (o.price as number) ?? (o.regular_price as number),
+      compareAtPrice: (o.compareAtPrice as number | null) ?? (o.sale_price as number | null) ?? null,
+    };
+  });
+}
+
+function toStoredVariants(formVariants: FormValues["variants"], origVariants: unknown): unknown[] {
+  if (!Array.isArray(origVariants) || origVariants.length === 0) return formVariants;
+  const isAppShape = origVariants.some((v) => v && typeof v === "object" && "regular_price" in (v as RawVariant));
+  if (!isAppShape) return formVariants;
+  return formVariants.map((fv, i) => {
+    const match =
+      (origVariants.find((o) => {
+        const oo = (o ?? {}) as RawVariant;
+        return (oo.weight as string) === fv.label || (oo.label as string) === fv.label;
+      }) as RawVariant | undefined) ?? (origVariants[i] as RawVariant | undefined) ?? {};
+    const grams = parseFloat(String(fv.label ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const pricePer100g =
+      grams > 0 && fv.price != null ? (fv.price / grams) * 100 : ((match.price_per_100g as number) ?? null);
+    return {
+      ...match,
+      id: (match.id as string) ?? `variant:${fv.label}`,
+      weight: fv.label,
+      regular_price: fv.price,
+      sale_price: fv.compareAtPrice ?? null,
+      price_per_100g: pricePer100g,
+      active: (match.active as boolean) ?? true,
+      is_default: (match.is_default as boolean) ?? i === 0,
+      sort_order: (match.sort_order as number) ?? i + 1,
+    };
+  });
+}
+
 function ProductForm({
   initial,
   categories,
@@ -140,7 +184,15 @@ function ProductForm({
   const name = watch("name");
 
   useEffect(() => {
-    reset(initial ?? EMPTY);
+    if (!initial) {
+      reset(EMPTY);
+      return;
+    }
+    // Show app-shaped variants (weight/regular_price) in the form's label/price fields.
+    reset({
+      ...initial,
+      variants: toFormVariants((initial as unknown as { variants?: unknown }).variants),
+    });
   }, [initial, reset]);
 
   const variants = useFieldArray({ control, name: "variants" });
@@ -172,6 +224,12 @@ function ProductForm({
     try {
       const payload = {
         ...values,
+        // Round-trip variants to the doc's original shape (app products keep
+        // weight/regular_price; dashboard products keep label/price).
+        variants: toStoredVariants(
+          values.variants,
+          (initial as unknown as { variants?: unknown } | null)?.variants
+        ),
         slug: values.slug?.trim() || slugify(values.name),
         categoryName: categories.find((c) => c.id === values.categoryId)?.name ?? values.categoryName,
       };
@@ -407,9 +465,15 @@ function ProductDetail({ product, onClose, onEdit }: { product: Product; onClose
       {!!product.variants?.length && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Variants</Typography>
-          {product.variants.map((v, i) => (
-            <Typography key={i} variant="body2" className="tnum">{v.label} — {rs(v.price)}{v.compareAtPrice ? ` (was ${rs(v.compareAtPrice)})` : ""}</Typography>
-          ))}
+          {product.variants.map((v, i) => {
+            const vv = v as unknown as Record<string, unknown>;
+            const label = (vv.label as string) ?? (vv.weight as string) ?? "";
+            const price = (vv.price as number) ?? (vv.regular_price as number);
+            const was = (vv.compareAtPrice as number | null) ?? (vv.sale_price as number | null);
+            return (
+              <Typography key={i} variant="body2" className="tnum">{label} — {rs(price)}{was ? ` (was ${rs(was)})` : ""}</Typography>
+            );
+          })}
         </Box>
       )}
       {!!product.ingredients?.length && (

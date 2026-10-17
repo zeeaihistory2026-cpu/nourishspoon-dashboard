@@ -275,7 +275,7 @@ export default function Shell({
             color: "#2c2a21",
           }}
         >
-          <Toolbar sx={{ gap: 2, py: 1, px: { xs: 2, md: 3 } }}>
+          <Toolbar sx={{ gap: { xs: 1, sm: 2 }, py: 1, px: { xs: 1.5, md: 3 } }}>
             <IconButton
               onClick={() => {
                 if (isDesktop) setCollapsed((c) => !c);
@@ -305,7 +305,6 @@ export default function Shell({
             }}
               />
             </Box>
-            <Box sx={{ flex: 1 }} />
             <Button
               variant="outlined"
               startIcon={<PhoneIphoneOutlined />}

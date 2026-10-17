@@ -300,13 +300,17 @@ export default function DashboardPage() {
             objectPosition: "right center",
           }}
         />
-        {/* Soft cream fade so the heading sits on a clean area, like the design */}
+        {/* Soft cream fade so the heading sits on a clean area, like the design.
+            On phones the fade stays strong across the whole banner so the heading
+            never collides with the jar artwork or script. */}
         <Box
           sx={{
             position: "absolute",
             inset: 0,
-            background:
-              "linear-gradient(90deg, #fbf6e7 0%, #fbf6e7 32%, rgba(251,246,231,0.85) 45%, rgba(251,246,231,0) 58%)",
+            background: {
+              xs: "linear-gradient(90deg, #fbf6e7 0%, rgba(251,246,231,0.94) 55%, rgba(251,246,231,0.55) 100%)",
+              md: "linear-gradient(90deg, #fbf6e7 0%, #fbf6e7 32%, rgba(251,246,231,0.85) 45%, rgba(251,246,231,0) 58%)",
+            },
           }}
         />
         <Box className="flex items-center" sx={{ position: "relative", minHeight: 232 }}>
@@ -335,7 +339,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* KPI cards */}
-      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(5, 1fr)" } }}>
+      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" } }}>
         <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" />
         <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" />
         <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" />
@@ -357,7 +361,7 @@ export default function DashboardPage() {
                 </Button>
               }
             />
-            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(2, 1fr)", "@media (min-width:1660px)": "repeat(4, 1fr)" } }}>
+            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", "@media (min-width:1660px)": "repeat(4, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/bowl.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(251,246,231,0.94) 0%, rgba(251,246,231,0.6) 48%, rgba(251,246,231,0) 72%)" }} />
@@ -558,7 +562,7 @@ export default function DashboardPage() {
             Quick Actions
           </Button>
         </Box>
-        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" } }}>
+        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" } }}>
           {MANAGE_SCREENS.map((s) => (
             <Card key={s.href} sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
               <Box className="flex items-start gap-2.5">

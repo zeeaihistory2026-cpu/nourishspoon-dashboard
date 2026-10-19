@@ -500,9 +500,39 @@ export default function DashboardPage() {
               }
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, alignItems: "stretch" }}>
-              <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              </HomeSectionCard>
+              <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2, height: "100%" }}>
+                <Box
+                  sx={{
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    width: "100%",
+                    position: "relative",
+                    border: "1px solid #ece4cb",
+                  }}
+                >
+                  <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "auto", display: "block" }} />
+                </Box>
+                <Box className="flex items-center gap-1.5">
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+                    onClick={() => router.push("/home-content")}
+                    sx={{ px: 2, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<VisibilityOutlined sx={{ fontSize: 14 }} />}
+                    onClick={() => router.push("/home-content?preview=1")}
+                    sx={{ px: 1.6, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
+                  >
+                    Preview
+                  </Button>
+                </Box>
+              </Card>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>

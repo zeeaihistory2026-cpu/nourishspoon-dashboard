@@ -23,35 +23,59 @@ import {
 import SearchIcon from "@mui/icons-material/SearchOutlined";
 import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
 import { useApi, api } from "@/lib/api";
-import { PageHeader, FormDrawer, ErrorState, StatusChip, ConfirmDialog } from "@/components/ui";
+import {
+  PageHeader,
+  FormDrawer,
+  ErrorState,
+  StatusChip,
+  ConfirmDialog,
+} from "@/components/ui";
 import { rs, fmtDateTime } from "@/lib/format";
 import type { Order, OrderEvent } from "@/lib/types";
 
 const STATUSES = [
   { value: "", label: "All" },
-  { value: "placed", label: "Placed" },
-  { value: "packed", label: "Packed" },
+  { value: "pending", label: "Pending" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "preparing", label: "Preparing" },
   { value: "out_for_delivery", label: "Out for delivery" },
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const FLOW = ["placed", "packed", "out_for_delivery", "delivered"];
+const FLOW = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "out_for_delivery",
+  "delivered",
+];
 const TERMINAL_CONFIRM = new Set(["delivered", "cancelled"]);
 
-function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => void; onUpdated: () => void }) {
+function OrderDetail({
+  id,
+  onClose,
+  onUpdated,
+}: {
+  id: string;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
   const { data, loading, error, refresh } = useApi<{
     item: Order;
     customer: any;
     events: OrderEvent[];
     tracking: any;
-  }>(`/api/admin/orders/${id}`);
+  }>(`/api/admin/orders/${id}`, true);
   const [newStatus, setNewStatus] = useState("");
   const [newPayment, setNewPayment] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const order = data?.item;
 
@@ -59,17 +83,32 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
     if (order) {
       setNewStatus(order.orderStatus);
       setNewPayment(order.paymentStatus);
+      setDeliveryFee(
+        order.deliveryFee == null ? "" : String(order.deliveryFee),
+      );
+      setTrackingNumber(order.trackingNumber || "");
     }
-  }, [order?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order?.id, order?.updatedAt]);
 
   async function save() {
     if (!order) return;
     setBusy(true);
     setMsg(null);
+    setSaveFailed(false);
     try {
       await api(`/api/admin/orders/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ orderStatus: newStatus, paymentStatus: newPayment || undefined, note: note || undefined }),
+        body: JSON.stringify({
+          orderStatus: newStatus,
+          paymentStatus: newPayment || undefined,
+          note: note || undefined,
+          ...(deliveryFee !== "" && Number(deliveryFee) !== order.deliveryFee
+            ? { deliveryFee: Number(deliveryFee) }
+            : {}),
+          ...(trackingNumber !== order.trackingNumber
+            ? { trackingNumber }
+            : {}),
+        }),
       });
       setNote("");
       setConfirming(false);
@@ -77,6 +116,7 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
       onUpdated();
       setMsg("Order updated.");
     } catch (e) {
+      setSaveFailed(true);
       setMsg(e instanceof Error ? e.message : "Update failed.");
     } finally {
       setBusy(false);
@@ -84,64 +124,136 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
   }
 
   function requestSave() {
-    if (TERMINAL_CONFIRM.has(newStatus) && newStatus !== order?.orderStatus) setConfirming(true);
+    if (TERMINAL_CONFIRM.has(newStatus) && newStatus !== order?.orderStatus)
+      setConfirming(true);
     else save();
   }
 
-  if (loading) return <Box sx={{ py: 8, textAlign: "center" }}><CircularProgress /></Box>;
-  if (error || !order) return <ErrorState message={error ?? "Order not found."} onRetry={refresh} />;
+  if (loading)
+    return (
+      <Box sx={{ py: 8, textAlign: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  if (error || !order)
+    return (
+      <ErrorState message={error ?? "Order not found."} onRetry={refresh} />
+    );
 
   const activeStep = FLOW.indexOf(order.orderStatus);
 
   return (
     <Box className="flex flex-col gap-5">
       {msg && (
-        <Typography variant="body2" sx={{ background: msg.includes("failed") || msg.includes("Cannot") ? "#fdecea" : "#e7f4ea", color: msg.includes("failed") || msg.includes("Cannot") ? "#c0392b" : "#2e7d4f", p: 1.5, borderRadius: 2 }}>
+        <Typography
+          role={saveFailed ? "alert" : "status"}
+          variant="body2"
+          sx={{
+            background: saveFailed ? "#fdecea" : "#e7f4ea",
+            color: saveFailed ? "#c0392b" : "#2e7d4f",
+            p: 1.5,
+            borderRadius: 2,
+          }}
+        >
           {msg}
         </Typography>
       )}
 
       <Box className="flex items-start justify-between gap-3 flex-wrap">
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>{order.orderNumber || order.id}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            {order.orderNumber || order.id}
+          </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {order.customerName || data.customer?.fullName || "Customer"} · {fmtDateTime(order.createdAt)}
+            {order.customerName || data.customer?.fullName || "Customer"} ·{" "}
+            {fmtDateTime(order.createdAt)}
           </Typography>
         </Box>
         <StatusChip status={order.orderStatus} />
       </Box>
 
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Items</Typography>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+          Items
+        </Typography>
         <Card sx={{ overflow: "hidden" }}>
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+          <table
+            className="w-full text-sm"
+            style={{ borderCollapse: "collapse" }}
+          >
             <tbody>
               {(order.items ?? []).map((it, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f1ebd6" }}>
                   <td style={{ padding: "10px 12px" }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{it.name}</Typography>
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>{it.weight} × {it.qty}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {it.name}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "text.secondary" }}
+                    >
+                      {it.weight} × {it.qty}
+                    </Typography>
                   </td>
-                  <td style={{ padding: "10px 12px", textAlign: "right" }} className="tnum font-bold">{rs(it.price * it.qty)}</td>
+                  <td
+                    style={{ padding: "10px 12px", textAlign: "right" }}
+                    className="tnum font-bold"
+                  >
+                    {rs(it.price * it.qty)}
+                  </td>
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: "8px 12px", color: "#8d8670" }}>Subtotal</td>
-                <td style={{ padding: "8px 12px", textAlign: "right" }} className="tnum">{rs(order.subtotal)}</td>
+                <td style={{ padding: "8px 12px", color: "#8d8670" }}>
+                  Subtotal
+                </td>
+                <td
+                  style={{ padding: "8px 12px", textAlign: "right" }}
+                  className="tnum"
+                >
+                  {rs(order.subtotal)}
+                </td>
               </tr>
               <tr>
-                <td style={{ padding: "8px 12px", color: "#8d8670" }}>Delivery</td>
-                <td style={{ padding: "8px 12px", textAlign: "right" }} className="tnum">{rs(order.deliveryFee)}</td>
+                <td style={{ padding: "8px 12px", color: "#8d8670" }}>
+                  Delivery
+                </td>
+                <td
+                  style={{ padding: "8px 12px", textAlign: "right" }}
+                  className="tnum"
+                >
+                  {rs(order.deliveryFee)}
+                </td>
               </tr>
               {order.discount ? (
                 <tr>
-                  <td style={{ padding: "8px 12px", color: "#2e7d4f" }}>Discount</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right", color: "#2e7d4f" }} className="tnum">−{rs(order.discount)}</td>
+                  <td style={{ padding: "8px 12px", color: "#2e7d4f" }}>
+                    Discount
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 12px",
+                      textAlign: "right",
+                      color: "#2e7d4f",
+                    }}
+                    className="tnum"
+                  >
+                    −{rs(order.discount)}
+                  </td>
                 </tr>
               ) : null}
               <tr style={{ borderTop: "2px solid #e7ddc2" }}>
                 <td style={{ padding: "10px 12px", fontWeight: 800 }}>Total</td>
-                <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 800 }} className="tnum">{rs(order.total)}</td>
+                <td
+                  style={{
+                    padding: "10px 12px",
+                    textAlign: "right",
+                    fontWeight: 800,
+                  }}
+                  className="tnum"
+                >
+                  {rs(order.total)}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -150,17 +262,29 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
 
       <Box className="grid grid-cols-2 gap-4">
         <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Delivery address</Typography>
-          <Typography variant="body2">{order.shippingAddress?.fullName}</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+            Delivery address
+          </Typography>
+          <Typography variant="body2">
+            {order.shippingAddress?.fullName}
+          </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {order.shippingAddress?.line1}, {order.shippingAddress?.city}
           </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>{order.shippingAddress?.phone}</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {order.shippingAddress?.phone}
+          </Typography>
         </Box>
         <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Payment</Typography>
-          <Typography variant="body2" className="capitalize">{(order.paymentMethod ?? "").replace("_", " ")}</Typography>
-          <Box sx={{ mt: 0.5 }}><StatusChip status={order.paymentStatus} /></Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+            Payment
+          </Typography>
+          <Typography variant="body2" className="capitalize">
+            {(order.paymentMethod ?? "").replace("_", " ")}
+          </Typography>
+          <Box sx={{ mt: 0.5 }}>
+            <StatusChip status={order.paymentStatus} />
+          </Box>
           {data.tracking && (
             <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
               Tracking: <b>{data.tracking.trackingNumber || "—"}</b>
@@ -170,16 +294,31 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
       </Box>
 
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5 }}>Progress</Typography>
-        <Stepper activeStep={order.orderStatus === "cancelled" ? -1 : activeStep} alternativeLabel>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5 }}>
+          Progress
+        </Typography>
+        <Stepper
+          activeStep={order.orderStatus === "cancelled" ? -1 : activeStep}
+          alternativeLabel
+        >
           {FLOW.map((s) => (
             <Step key={s}>
-              <StepLabel><span className="capitalize">{s.replace(/_/g, " ")}</span></StepLabel>
+              <StepLabel>
+                <span className="capitalize">{s.replace(/_/g, " ")}</span>
+              </StepLabel>
             </Step>
           ))}
         </Stepper>
         {order.orderStatus === "cancelled" && (
-          <Typography variant="body2" sx={{ color: "#c0392b", textAlign: "center", mt: 1, fontWeight: 700 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#c0392b",
+              textAlign: "center",
+              mt: 1,
+              fontWeight: 700,
+            }}
+          >
             This order was cancelled.
           </Typography>
         )}
@@ -188,24 +327,71 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
       <Divider />
 
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5 }}>Update order</Typography>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5 }}>
+          Update order
+        </Typography>
         <Box className="grid grid-cols-2 gap-3">
           <FormControl size="small" fullWidth>
             <InputLabel>Order status</InputLabel>
-            <Select value={newStatus} label="Order status" onChange={(e) => setNewStatus(e.target.value)}>
-              {["placed", "packed", "out_for_delivery", "delivered", "cancelled"].map((s) => (
-                <MenuItem key={s} value={s} className="capitalize">{s.replace(/_/g, " ")}</MenuItem>
-              ))}
+            <Select
+              value={newStatus}
+              label="Order status"
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              {[...FLOW, "cancelled"]
+                .filter(
+                  (s) =>
+                    s === order.orderStatus ||
+                    (!["delivered", "cancelled"].includes(order.orderStatus) &&
+                      (s === "cancelled" ||
+                        FLOW.indexOf(s) === activeStep + 1)),
+                )
+                .map((s) => (
+                  <MenuItem key={s} value={s} className="capitalize">
+                    {s.replace(/_/g, " ")}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
           <FormControl size="small" fullWidth>
             <InputLabel>Payment status</InputLabel>
-            <Select value={newPayment} label="Payment status" onChange={(e) => setNewPayment(e.target.value)}>
-              {["pending", "paid", "failed", "refunded"].map((s) => (
-                <MenuItem key={s} value={s} className="capitalize">{s}</MenuItem>
-              ))}
+            <Select
+              value={newPayment}
+              label="Payment status"
+              onChange={(e) => setNewPayment(e.target.value)}
+            >
+              {["awaiting_payment", "submitted", "paid", "refunded"].map(
+                (s) => (
+                  <MenuItem key={s} value={s} className="capitalize">
+                    {s}
+                  </MenuItem>
+                ),
+              )}
             </Select>
           </FormControl>
+        </Box>
+        <Box className="grid grid-cols-2 gap-3" sx={{ mt: 2 }}>
+          <TextField
+            label="Delivery fee (Rs.)"
+            size="small"
+            type="number"
+            value={deliveryFee}
+            disabled={order.orderStatus !== "pending"}
+            slotProps={{ htmlInput: { min: 0, max: 10000, step: 1 } }}
+            onChange={(e) => setDeliveryFee(e.target.value)}
+            helperText={
+              order.quotePending
+                ? "Calculated automatically when you confirm"
+                : "Confirmed delivery charge"
+            }
+          />
+          <TextField
+            label="TCS consignment number"
+            size="small"
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            helperText="Required before TCS dispatch"
+          />
         </Box>
         <TextField
           fullWidth
@@ -217,12 +403,24 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
           placeholder="Visible in the order timeline"
         />
         <Box className="flex justify-end gap-2 mt-3">
-          <Button variant="outlined" onClick={onClose}>Close</Button>
+          <Button variant="outlined" onClick={onClose}>
+            Close
+          </Button>
           <Button
             variant="contained"
-            disabled={busy || (newStatus === order.orderStatus && newPayment === order.paymentStatus && !note)}
+            disabled={
+              busy ||
+              (newStatus === order.orderStatus &&
+                newPayment === order.paymentStatus &&
+                !note &&
+                trackingNumber === order.trackingNumber &&
+                (deliveryFee === "" ||
+                  Number(deliveryFee) === order.deliveryFee))
+            }
             onClick={requestSave}
-            startIcon={busy ? <CircularProgress size={16} color="inherit" /> : undefined}
+            startIcon={
+              busy ? <CircularProgress size={16} color="inherit" /> : undefined
+            }
           >
             Update order
           </Button>
@@ -231,16 +429,32 @@ function OrderDetail({ id, onClose, onUpdated }: { id: string; onClose: () => vo
 
       {!!data.events?.length && (
         <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Timeline</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+            Timeline
+          </Typography>
           <Box className="flex flex-col gap-2">
             {data.events.map((ev) => (
-              <Box key={ev.id} sx={{ background: "#fbf7ea", border: "1px solid #ece4cb", borderRadius: 2, p: 1.5 }}>
+              <Box
+                key={ev.id}
+                sx={{
+                  background: "#fbf7ea",
+                  border: "1px solid #ece4cb",
+                  borderRadius: 2,
+                  p: 1.5,
+                }}
+              >
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {(ev.from ? `${ev.from} → ` : "")}{ev.to}
+                  {ev.from ? `${ev.from} → ` : ""}
+                  {ev.to}
                 </Typography>
-                {ev.note && <Typography variant="body2" sx={{ color: "text.secondary" }}>{ev.note}</Typography>}
+                {ev.note && (
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {ev.note}
+                  </Typography>
+                )}
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  {fmtDateTime(ev.at)}{ev.byEmail ? ` · ${ev.byEmail}` : ""}
+                  {fmtDateTime(ev.at)}
+                  {ev.byEmail ? ` · ${ev.byEmail}` : ""}
                 </Typography>
               </Box>
             ))}
@@ -266,12 +480,20 @@ function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const statusFromUrl = searchParams.get("status") || "";
+  const [status, setStatus] = useState(statusFromUrl);
   const [viewId, setViewId] = useState<string | null>(null);
 
   const path = `/api/admin/orders?limit=300${status ? `&status=${status}` : ""}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`;
-  const { data, loading, error, refresh } = useApi<{ items: (Order & { customerName?: string })[] }>(path);
+  const { data, loading, error, refresh } = useApi<{
+    items: (Order & { customerName?: string })[];
+  }>(path, true);
   const rows = useMemo(() => data?.items ?? [], [data]);
+
+  useEffect(() => {
+    if (STATUSES.some((item) => item.value === statusFromUrl))
+      setStatus(statusFromUrl);
+  }, [statusFromUrl]);
 
   useEffect(() => {
     const v = searchParams.get("view");
@@ -280,10 +502,20 @@ function Page() {
 
   function closeDrawer() {
     setViewId(null);
-    router.replace("/orders", { scroll: false });
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("view");
+    router.replace(`/orders${params.size ? "?" + params : ""}`, {
+      scroll: false,
+    });
   }
 
-  if (error) return (<><PageHeader title="Orders" /><ErrorState message={error} onRetry={refresh} /></>);
+  if (error)
+    return (
+      <>
+        <PageHeader title="Orders" />
+        <ErrorState message={error} onRetry={refresh} />
+      </>
+    );
 
   return (
     <Box>
@@ -314,51 +546,145 @@ function Page() {
           onChange={(e) => setSearch(e.target.value)}
           sx={{ maxWidth: 440, width: "100%" }}
           slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#8d8670", fontSize: 19 }} />
-                  </InputAdornment>
-                ),
-              },
-              }}
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: "#8d8670", fontSize: 19 }} />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
       </Card>
 
       <Card sx={{ overflow: "hidden" }}>
         <Box className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+          <table
+            className="w-full text-sm"
+            style={{ borderCollapse: "collapse" }}
+          >
             <thead>
               <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                {["Order ID", "Customer", "Items", "Amount", "Payment", "Status", "Date", ""].map((h, i) => (
-                  <th key={i} style={{ textAlign: "left", padding: "12px 12px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
+                {[
+                  "Order ID",
+                  "Customer",
+                  "Items",
+                  "Amount",
+                  "Payment",
+                  "Status",
+                  "Date",
+                  "",
+                ].map((h, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      textAlign: "left",
+                      padding: "12px 12px",
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      color: "#8d8670",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={8} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>Loading orders...</td></tr>}
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    style={{
+                      padding: 32,
+                      textAlign: "center",
+                      color: "#8d8670",
+                    }}
+                  >
+                    Loading orders...
+                  </td>
+                </tr>
+              )}
               {rows.map((o) => (
-                <tr key={o.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => setViewId(o.id)}>
-                  <td style={{ padding: "11px 12px", fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap" }}>{o.orderNumber || o.id.slice(0, 8).toUpperCase()}</td>
-                  <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>{o.customerName || "Customer"}</td>
-                  <td style={{ padding: "11px 12px" }} className="tnum">{(o.items ?? []).reduce((s, i) => s + (i.qty ?? 1), 0)}</td>
-                  <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }} className="tnum font-bold">{rs(o.total)}</td>
-                  <td style={{ padding: "11px 12px" }}><StatusChip status={o.paymentStatus} /></td>
-                  <td style={{ padding: "11px 12px" }}><StatusChip status={o.orderStatus} /></td>
-                  <td style={{ padding: "11px 12px", whiteSpace: "nowrap", color: "#57523f" }}>{fmtDateTime(o.createdAt).split(",")[0]}</td>
-                  <td style={{ padding: "11px 12px" }}><VisibilityOutlined sx={{ color: "#b3a983", fontSize: 18 }} /></td>
+                <tr
+                  key={o.id}
+                  style={{ borderBottom: "1px solid #f1ebd6" }}
+                  className="hover:bg-[#fdfaf0] cursor-pointer"
+                  onClick={() => setViewId(o.id)}
+                >
+                  <td
+                    style={{
+                      padding: "11px 12px",
+                      fontWeight: 700,
+                      fontSize: 12.5,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {o.orderNumber || o.id.slice(0, 8).toUpperCase()}
+                  </td>
+                  <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                    {o.customerName || "Customer"}
+                  </td>
+                  <td style={{ padding: "11px 12px" }} className="tnum">
+                    {(o.items ?? []).reduce((s, i) => s + (i.qty ?? 1), 0)}
+                  </td>
+                  <td
+                    style={{ padding: "11px 12px", whiteSpace: "nowrap" }}
+                    className="tnum font-bold"
+                  >
+                    {rs(o.total)}
+                  </td>
+                  <td style={{ padding: "11px 12px" }}>
+                    <StatusChip status={o.paymentStatus} />
+                  </td>
+                  <td style={{ padding: "11px 12px" }}>
+                    <StatusChip status={o.orderStatus} />
+                  </td>
+                  <td
+                    style={{
+                      padding: "11px 12px",
+                      whiteSpace: "nowrap",
+                      color: "#57523f",
+                    }}
+                  >
+                    {fmtDateTime(o.createdAt).split(",")[0]}
+                  </td>
+                  <td style={{ padding: "11px 12px" }}>
+                    <VisibilityOutlined
+                      sx={{ color: "#b3a983", fontSize: 18 }}
+                    />
+                  </td>
                 </tr>
               ))}
               {!loading && !rows.length && (
-                <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#8d8670" }}>No orders found.</td></tr>
+                <tr>
+                  <td
+                    colSpan={8}
+                    style={{
+                      padding: 40,
+                      textAlign: "center",
+                      color: "#8d8670",
+                    }}
+                  >
+                    No orders found.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </Box>
       </Card>
 
-      <FormDrawer open={Boolean(viewId)} wide title="Order details" onClose={closeDrawer}>
-        {viewId && <OrderDetail id={viewId} onClose={closeDrawer} onUpdated={refresh} />}
+      <FormDrawer
+        open={Boolean(viewId)}
+        wide
+        title="Order details"
+        onClose={closeDrawer}
+      >
+        {viewId && (
+          <OrderDetail id={viewId} onClose={closeDrawer} onUpdated={refresh} />
+        )}
       </FormDrawer>
     </Box>
   );

@@ -1,9 +1,33 @@
 "use client";
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  type Firestore,
+} from "firebase/firestore";
 
 let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let database: Firestore | null = null;
+
+export function getFirebaseDatabase(): Firestore {
+  if (database) return database;
+  const instance = getFirestore(getFirebaseApp());
+  const host = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST;
+  if (host) {
+    if (
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID !== "demo-nourish-spoon" ||
+      !/^(127\.0\.0\.1|localhost):\d+$/.test(host)
+    )
+      throw new Error("Local previews require the isolated demo project.");
+    const [hostname, port] = host.split(":");
+    connectFirestoreEmulator(instance, hostname, Number(port));
+  }
+  database = instance;
+  return database;
+}
 
 export function getFirebaseApp(): FirebaseApp {
   if (app) return app;
@@ -23,12 +47,23 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  if (auth) return auth;
+  auth = getAuth(getFirebaseApp());
+  const host = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+  if (host) {
+    if (
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID !== "demo-nourish-spoon" ||
+      !/^(127\.0\.0\.1|localhost):\d+$/.test(host)
+    )
+      throw new Error("Local previews require the isolated demo project.");
+    connectAuthEmulator(auth, `http://${host}`, { disableWarnings: true });
+  }
+  return auth;
 }
 
 export function isFirebaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   );
 }

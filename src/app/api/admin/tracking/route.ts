@@ -1,68 +1,56 @@
-import { z } from "zod";
-import { adminDb, docToJSON, FieldValue } from "@/lib/firebase-admin";
-import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
-import { trackingSchema } from "@/lib/schemas";
+import {
+  assertSameOrigin,
+  authErrorResponse,
+  requireAdmin,
+} from "@/lib/auth-server";
 
-export async function GET(req: Request) {
+import { updateOrderRecord } from "@/lib/commerce-server";
+import { boundedLimit, trackingView } from "@/lib/contracts";
+import { recentOrders } from "@/lib/orders-data";
+import { z } from "zod";
+export async function GET(request: Request) {
   try {
     await requireAdmin();
-    const url = new URL(req.url);
-    const search = (url.searchParams.get("search") ?? "").toLowerCase().trim();
-    const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 1000);
-    const snap = await adminDb().collection("tracking").orderBy("updatedAt", "desc").limit(limit).get();
-    let items = snap.docs.map((d) => docToJSON(d)).filter(Boolean) as Record<string, unknown>[];
-    if (search) {
-      items = items.filter((t) =>
-        [t.trackingNumber, t.orderNumber, t.customerName, t.carrier]
-          .map((v) => String(v ?? "").toLowerCase())
-          .some((v) => v.includes(search))
+    const params = new URL(request.url).searchParams;
+    const search = (params.get("search") || "").toLowerCase();
+    const loaded = await recentOrders(boundedLimit(params.get("limit")));
+    const items = loaded
+      .filter((row) => row.item.trackingNumber)
+      .map((row) => trackingView(row.item.id, row.raw))
+      .filter(
+        (row) =>
+          !search ||
+          [row.trackingNumber, row.orderNumber, row.customerName]
+            .join(" ")
+            .toLowerCase()
+            .includes(search),
       );
-    }
-    return Response.json({ items, total: items.length });
-  } catch (err) {
-    return authErrorResponse(err);
+    return Response.json({ items });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const admin = await requireAdmin();
-    const parsed = trackingSchema.parse(await req.json());
-    const db = adminDb();
-
-    // Attach to an existing order where possible for customer/order context.
-    const orderSnap = await db.collection("orders").doc(parsed.orderId).get();
-    const order = orderSnap.exists ? (docToJSON(orderSnap) as Record<string, unknown>) : null;
-
-    const first = {
-      key: "order_placed",
-      label: "Order Placed",
-      at: FieldValue.serverTimestamp(),
-      by: admin.uid,
-    };
-    const ref = db.collection("tracking").doc(parsed.orderId);
-    await ref.set(
-      {
-        orderId: parsed.orderId,
-        orderNumber: (order?.orderNumber as string) ?? parsed.orderId.slice(0, 8).toUpperCase(),
-        customerName: (order?.customerName as string) ?? "",
-        trackingNumber: parsed.trackingNumber,
-        carrier: parsed.carrier || "",
-        current: "order_placed",
-        milestones: [first],
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: admin.uid,
-        updatedByEmail: (admin.email as string) ?? "",
-      },
-      { merge: true }
+    const input = z
+      .object({
+        orderId: z.string().min(1).max(80),
+        trackingNumber: z
+          .string()
+          .regex(/^\d{8,20}$/, "Enter an 8-20 digit TCS consignment number."),
+      })
+      .parse(await request.json());
+    const updated = await updateOrderRecord(
+      { id: input.orderId, tracking_number: input.trackingNumber },
+      admin,
     );
-    const snap = await ref.get();
-    return Response.json({ item: docToJSON(snap) }, { status: 201 });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return Response.json({ error: err.issues[0]?.message ?? "Invalid data." }, { status: 400 });
-    }
-    return authErrorResponse(err);
+    return Response.json(
+      { item: trackingView(input.orderId, updated) },
+      { status: 201 },
+    );
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }

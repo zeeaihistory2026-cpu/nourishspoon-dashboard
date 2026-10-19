@@ -4,6 +4,7 @@ const DEFAULT_REWARDS = {
   point_value: 1,
   minimum_redemption: 100,
   referral_points: 200,
+  referrals_enabled: true,
 };
 const DEFAULT_PROMO = {
   code: "PROMO10",
@@ -28,7 +29,11 @@ function rewardsConfig(raw = {}) {
       value[key] > 100000
     )
       throw Error("Check reward rates.");
-  return { ...value, enabled: value.enabled === true };
+  return {
+    ...value,
+    enabled: value.enabled === true,
+    referrals_enabled: value.referrals_enabled === true,
+  };
 }
 function promoCode(value) {
   if (!value) return "";

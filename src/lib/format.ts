@@ -1,5 +1,5 @@
 export function rs(n: number | undefined | null): string {
-  if (n === undefined || n === null || Number.isNaN(n)) return "Rs. 0";
+  if (n === undefined || n === null || Number.isNaN(n)) return "Awaiting quote";
   return "Rs. " + Math.round(n).toLocaleString("en-PK");
 }
 
@@ -28,7 +28,11 @@ export function fmtDateTime(iso?: string | null): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return (
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }) +
     ", " +
     d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
   );

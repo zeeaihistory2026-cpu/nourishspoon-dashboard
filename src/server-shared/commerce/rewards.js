@@ -1,5 +1,6 @@
 const { createHash } = require("node:crypto");
 const rules = require("./rewardRules");
+const { deliveryCharge } = require("../lib/delivery");
 module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
   const walletRef = (uid) => db.doc(`rewardWallets/${uid}`);
   const codeFor = (uid) =>
@@ -45,12 +46,18 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
       wallet.balance,
       config,
     );
+    const delivery_fee = deliveryCharge(
+      priced.subtotal - result.discount,
+      input.delivery_method,
+    );
     return {
       result: {
         ...result,
         promo_code: code,
         reward_rates: config,
-        total: priced.total === null ? null : priced.total - result.discount,
+        delivery_fee,
+        quote_pending: false,
+        total: priced.subtotal - result.discount + delivery_fee,
       },
       apply(orderId) {
         if (!result.points_redeemed) return;
@@ -96,6 +103,7 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
       !wallet.referral_paid &&
       wallet.referred_by &&
       config.enabled &&
+      config.referrals_enabled &&
       before.subtotal > before.discount;
     const bonus = referralEligible ? config.referral_points : 0;
     const referrerUid = before.reward_referrer || wallet.referred_by;
@@ -138,6 +146,18 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
             "Friend’s first paid delivery",
             orderId,
           );
+          tx.set(
+            db.doc(`referrals/${uid}`),
+            {
+              referrerId: referrerUid,
+              referredId: uid,
+              status: "rewarded",
+              rewardAmount: bonus,
+              orderId,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true },
+          );
         }
         Object.assign(patch, {
           rewards_settled: true,
@@ -177,6 +197,11 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
             "Refunded referral adjustment",
             orderId,
           );
+          tx.set(
+            db.doc(`referrals/${uid}`),
+            { status: "reversed", updatedAt: new Date().toISOString() },
+            { merge: true },
+          );
         }
         Object.assign(patch, { rewards_reversed: true });
       }
@@ -186,7 +211,7 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
     const uid = signedIn(request),
       reference = walletRef(uid),
       codeRef = db.doc(`referralCodes/${codeFor(uid)}`);
-    const account = await db.runTransaction(async (tx) => {
+    const accountRequest = db.runTransaction(async (tx) => {
       const [snapshot, code] = await Promise.all([
         tx.get(reference),
         tx.get(codeRef),
@@ -198,18 +223,25 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
       if (!code.exists) tx.set(codeRef, { uid });
       return wallet;
     });
-    const [settings, history] = await Promise.all([
+    const [account, settings, history, program] = await Promise.all([
+      accountRequest,
       db.doc("settings/rewards").get(),
       reference
         .collection("history")
         .orderBy("created_at", "desc")
         .limit(30)
         .get(),
+      db.doc("appConfig/referral").get(),
     ]);
     return {
       ...account,
       config: rules.rewardsConfig(settings.data()),
       history: history.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      referral_program: {
+        headline: program.data()?.headline || "",
+        copy: program.data()?.copy || "",
+        terms: program.data()?.terms || "",
+      },
     };
   });
   const applyReferral = callable(async (request) => {
@@ -219,42 +251,87 @@ module.exports = function rewardsServices({ db, callable, signedIn, owner }) {
     const code = rules.promoCode(request.data.code);
     if (!code) throw Error("Enter your friend’s referral code.");
     return db.runTransaction(async (tx) => {
-      const [referral, walletDoc, orders] = await Promise.all([
+      const [referral, walletDoc, orders, configDoc] = await Promise.all([
         tx.get(db.doc(`referralCodes/${code}`)),
         tx.get(walletRef(uid)),
         tx.get(
           db.collection("orders").where("customer_uid", "==", uid).limit(1),
         ),
+        tx.get(db.doc("settings/rewards")),
       ]);
+      const config = rules.rewardsConfig(configDoc.data());
+      if (!config.enabled || !config.referrals_enabled)
+        throw Error("The referral program is currently paused.");
       const wallet = walletDoc.data() || empty(uid);
       if (!referral.exists || referral.data().uid === uid)
         throw Error("Enter a valid referral code from another customer.");
       if (wallet.referred_by || wallet.has_delivered_order || !orders.empty)
         throw Error("Add a referral once, before your first order.");
       tx.set(walletRef(uid), { ...wallet, referred_by: referral.data().uid });
+      tx.set(db.doc(`referrals/${uid}`), {
+        referrerId: referral.data().uid,
+        referredId: uid,
+        code,
+        status: "pending",
+        rewardAmount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
       return { applied: true };
     });
   });
   const quoteOrder = callable(async (request) => {
     const uid = signedIn(request);
-    return db.runTransaction(async (tx) => {
-      const [catalog, settings, customer] = await Promise.all([
-        tx.get(db.collection("products")),
-        tx.get(db.doc("settings/commerce")),
-        tx.get(db.doc(`users/${uid}`)),
-      ]);
-      const normalize = require("../lib/normalizeProduct").normalizeProduct;
-      const priced = require("./domain").priceOrder(
-        request.data.items,
-        catalog.docs.map((doc) => normalize(doc.id, doc.data())),
-        settings.data() || {},
-        request.data.delivery_method,
-        !customer.data()?.has_order,
-      );
-      const quoted = await checkout(tx, uid, request.data, priced);
-      return { ...priced, ...quoted.result };
-    });
+    const input = request.data;
+    if (
+      !Array.isArray(input.items) ||
+      !input.items.length ||
+      input.items.length > 10
+    )
+      throw Error("Choose between 1 and 10 items.");
+    const ids = [...new Set(input.items.map((item) => item?.product_id))];
+    if (
+      ids.some(
+        (id) => typeof id !== "string" || !/^[A-Za-z0-9_-]{1,160}$/.test(id),
+      )
+    )
+      throw Error("An item is no longer available.");
+    const code = rules.promoCode(input.promo_code);
+    const productRefs = ids.map((id) => db.doc(`products/${id}`));
+    return db.runTransaction(
+      async (tx) => {
+        // One consistent server read: no full catalogue scan or serial reward lookup.
+        const documents = await tx.getAll(
+          walletRef(uid),
+          db.doc("settings/rewards"),
+          ...productRefs,
+          ...(code ? [db.doc(`promoCodes/${code}`)] : []),
+        );
+        const snapshots = new Map(
+          documents.map((snapshot) => [snapshot.ref.path, snapshot]),
+        );
+        const normalize = require("../lib/normalizeProduct").normalizeProduct;
+        const priced = require("./domain").priceOrder(
+          input.items,
+          productRefs
+            .map((ref) => snapshots.get(ref.path))
+            .filter((doc) => doc.exists)
+            .map((doc) => normalize(doc.id, doc.data())),
+          {},
+          input.delivery_method,
+        );
+        const quoted = await checkout(
+          { get: (ref) => Promise.resolve(snapshots.get(ref.path)) },
+          uid,
+          input,
+          priced,
+        );
+        return { ...priced, ...quoted.result };
+      },
+      { readOnly: true },
+    );
   });
+
   const saveRewardsSettings = callable(async (request) => {
     owner(request);
     const config = rules.rewardsConfig(request.data);

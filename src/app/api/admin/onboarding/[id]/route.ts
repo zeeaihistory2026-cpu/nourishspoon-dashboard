@@ -15,7 +15,9 @@ const { GET, PATCH, DELETE } = crudItemRoutes({
       .get();
     const othersActive = snap.docs.filter((d) => d.id !== doc.id).length;
     if (othersActive === 0) {
-      throw new Error("GUARD: You cannot delete the last active onboarding slide.");
+      throw new Error(
+        "GUARD: You cannot delete the last active onboarding slide.",
+      );
     }
   },
 });

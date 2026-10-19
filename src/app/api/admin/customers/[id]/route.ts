@@ -1,93 +1,95 @@
-import { z } from "zod";
-import { adminDb, adminAuth, docToJSON, FieldValue } from "@/lib/firebase-admin";
-import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
-import { customerUpdateSchema } from "@/lib/schemas";
+import {
+  assertSameOrigin,
+  AuthError,
+  authErrorResponse,
+  requireAdmin,
+} from "@/lib/auth-server";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+import { customerView, iso, orderView } from "@/lib/contracts";
+import { customerUpdateSchema } from "@/lib/schemas";
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
   try {
     await requireAdmin();
-    const { id } = await ctx.params;
+    const { id } = await context.params;
     const db = adminDb();
-    const snap = await db.collection("users").doc(id).get();
-    const profile = docToJSON(snap);
-    if (!profile) return Response.json({ error: "Customer not found." }, { status: 404 });
-
-    // NOTE: No orderBy() here — Firestore equality + orderBy on different fields
-    // needs a composite index, and a missing index made the WHOLE profile 500
-    // ("try again"). We fetch then sort in memory, and each sub-query is
-    // isolated so one failure never kills the profile.
-    const [addrSnap, ordersSnap, pointsSnap, wishlistSnap, refSnap] = await Promise.all([
-      db.collection("users").doc(id).collection("addresses").get().catch(() => ({ docs: [] as unknown[] })),
-      db.collection("orders").where("userId", "==", id).limit(50).get().catch(() => ({ docs: [] as unknown[] })),
-      db.collection("rewardTransactions").where("userId", "==", id).limit(50).get().catch(() => ({ docs: [] as unknown[] })),
-      db.collection("users").doc(id).collection("wishlist").get().catch(() => ({ docs: [] as unknown[] })),
-      db.collection("referrals").where("referrerId", "==", id).limit(50).get().catch(() => null),
+    const snapshot = await db.collection("users").doc(id).get();
+    if (!snapshot.exists) throw new AuthError(404, "Customer not found.");
+    const [wallet, addresses, orders, history, wishlist] = await Promise.all([
+      db.collection("rewardWallets").doc(id).get(),
+      snapshot.ref.collection("addresses").get(),
+      db.collection("orders").where("customer_uid", "==", id).limit(100).get(),
+      db
+        .collection("rewardWallets")
+        .doc(id)
+        .collection("history")
+        .orderBy("created_at", "desc")
+        .limit(50)
+        .get(),
+      snapshot.ref.collection("wishlist").get(),
     ]);
-    const byDateDesc = (a: Record<string, unknown>, b: Record<string, unknown>, field: string) =>
-      String(b[field] ?? "").localeCompare(String(a[field] ?? ""));
-    const toRows = (docs: readonly unknown[]) =>
-      docs
-        .map((d) => docToJSON(d as never))
-        .filter((r): r is Record<string, unknown> => r !== null);
-    const orders = toRows(ordersSnap.docs).sort((a, b) => byDateDesc(a, b, "createdAt"));
-    const pointsHistory = toRows(pointsSnap.docs).sort((a, b) => byDateDesc(a, b, "at"));
-    const referrals = toRows(refSnap ? refSnap.docs : []).sort((a, b) => byDateDesc(a, b, "createdAt"));
-
-    let disabled = false;
-    try {
-      disabled = (await adminAuth().getUser(id)).disabled;
-    } catch {
-      /* user may not exist in Auth */
-    }
-
-    // Enrich wishlist with product names.
-    const wishlist = await Promise.all(
-      wishlistSnap.docs.map(async (d) => {
-        const w = docToJSON(d as never) as Record<string, unknown>;
-        if (w.productId) {
-          const p = await db.collection("products").doc(w.productId as string).get().catch(() => null);
-          if (p?.exists) {
-            const pd = p.data() as { name?: string; images?: string[] };
-            w.productName = pd.name ?? "";
-            w.productImage = pd.images?.[0] ?? "";
-          }
-        }
-        return { ...w, userId: id };
-      })
-    );
-
+    const account = await adminAuth()
+      .getUser(id)
+      .catch(() => null);
     return Response.json({
-      item: { ...profile, disabled },
-      addresses: addrSnap.docs.map((d) => docToJSON(d as never)),
-      orders,
-      pointsHistory,
-      wishlist,
-      referrals,
+      item: {
+        ...customerView(id, snapshot.data()!, wallet.data()),
+        disabled: account?.disabled ?? false,
+      },
+      addresses: addresses.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        fullName: doc.data().name,
+        line1: doc.data().line,
+      })),
+      orders: orders.docs
+        .map((doc) => orderView(doc.id, doc.data()))
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))),
+      pointsHistory: history.docs.map((doc) => ({
+        id: doc.id,
+        userId: id,
+        delta: doc.data().points,
+        reason: doc.data().title,
+        at: iso(doc.data().created_at),
+      })),
+      wishlist: wishlist.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+        userId: id,
+        productId: doc.data().product_id ?? doc.id,
+      })),
+      referrals: [],
     });
-  } catch (err) {
-    return authErrorResponse(err);
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }
-
-export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
   try {
+    assertSameOrigin(request);
     const admin = await requireAdmin();
-    const { id } = await ctx.params;
-    const parsed = customerUpdateSchema.parse(await req.json());
-    const data: Record<string, unknown> = { ...parsed };
-    for (const k of Object.keys(data)) if (data[k] === undefined) delete data[k];
-    data.updatedAt = FieldValue.serverTimestamp();
-    data.updatedBy = admin.uid;
-    const ref = adminDb().collection("users").doc(id);
-    const snap = await ref.get();
-    if (!snap.exists) return Response.json({ error: "Customer not found." }, { status: 404 });
-    await ref.update(data);
-    const updated = await ref.get();
-    return Response.json({ item: docToJSON(updated) });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return Response.json({ error: err.issues[0]?.message ?? "Invalid data." }, { status: 400 });
-    }
-    return authErrorResponse(err);
+    const { id } = await context.params;
+    const input = customerUpdateSchema.parse(await request.json());
+    if (input.fullName !== undefined)
+      await adminAuth().updateUser(id, { displayName: input.fullName });
+    const reference = adminDb().collection("users").doc(id);
+    await reference.update({
+      ...input,
+      updatedAt: new Date().toISOString(),
+      updatedBy: admin.uid,
+    });
+    const snapshot = await reference.get();
+    const wallet = await adminDb().collection("rewardWallets").doc(id).get();
+    return Response.json({
+      item: customerView(id, snapshot.data()!, wallet.data()),
+    });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }

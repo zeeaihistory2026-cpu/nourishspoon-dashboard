@@ -3,13 +3,15 @@ import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
 
 const TERMINAL = new Set(["delivered", "cancelled"]);
 
-/** Allowed forward transitions (plus cancel from non-terminal). */
+/** Allowed forward transitions (plus cancel from non-terminal).
+ * Currently permissive: any status can move to any other status, so the
+ * admin is never blocked. Terminal states can still be left if needed. */
 const TRANSITIONS: Record<string, string[]> = {
-  placed: ["packed", "out_for_delivery", "delivered", "cancelled"],
-  packed: ["out_for_delivery", "delivered", "cancelled"],
-  out_for_delivery: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: [],
+  placed: ["placed", "packed", "out_for_delivery", "delivered", "cancelled"],
+  packed: ["placed", "packed", "out_for_delivery", "delivered", "cancelled"],
+  out_for_delivery: ["placed", "packed", "out_for_delivery", "delivered", "cancelled"],
+  delivered: ["placed", "packed", "out_for_delivery", "delivered", "cancelled"],
+  cancelled: ["placed", "packed", "out_for_delivery", "delivered", "cancelled"],
 };
 
 export function isTransitionAllowed(from: string, to: string): boolean {

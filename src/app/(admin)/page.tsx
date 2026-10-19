@@ -269,7 +269,7 @@ function HomeSectionCard({
   onPreview: () => void;
 }) {
   return (
-    <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2 }}>
+    <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2, height: "100%" }}>
       <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, px: 0.5 }}>
         {title}
       </Typography>
@@ -499,7 +499,7 @@ export default function DashboardPage() {
                 </Button>
               }
             />
-            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" } }}>
+            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, alignItems: "stretch" }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>

@@ -222,7 +222,7 @@ function SectionHead({
   action?: React.ReactNode;
 }) {
   return (
-    <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+    <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap" sx={{ minHeight: 38 }}>
       <Box className="flex items-baseline gap-3 flex-wrap">
         <Typography
           variant="h5"

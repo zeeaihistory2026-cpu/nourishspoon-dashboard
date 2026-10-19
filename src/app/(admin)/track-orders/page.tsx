@@ -1,31 +1,31 @@
 "use client";
 
-import { ErrorState,FormDrawer,PageHeader,StatusChip } from "@/components/ui";
-import { api,useApi } from "@/lib/api";
-import { fmtDateTime } from "@/lib/format";
-import type { TrackingMilestone,TrackingRecord } from "@/lib/types";
-import AddIcon from "@mui/icons-material/AddOutlined";
-import SearchIcon from "@mui/icons-material/SearchOutlined";
-import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-Box,
-Button,
-Card,
-CircularProgress,
-Divider,
-FormControl,
-InputAdornment,
-InputLabel,
-MenuItem,
-Select,
-Step,
-StepLabel,
-Stepper,
-TextField,
-Typography,
+  Box,
+  Button,
+  Card,
+  CircularProgress,
+  FormControl,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  Divider,
 } from "@mui/material";
-import { useRouter,useSearchParams } from "next/navigation";
-import { Suspense,useEffect,useMemo,useState } from "react";
+import SearchIcon from "@mui/icons-material/SearchOutlined";
+import AddIcon from "@mui/icons-material/AddOutlined";
+import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import { useApi, api } from "@/lib/api";
+import { PageHeader, FormDrawer, ErrorState, StatusChip, ConfirmDialog } from "@/components/ui";
+import { fmtDateTime } from "@/lib/format";
+import type { TrackingRecord, TrackingMilestone } from "@/lib/types";
 
 const MILESTONES = [
   { key: "order_placed", label: "Order Placed" },
@@ -38,7 +38,7 @@ const MILESTONES = [
 ];
 
 function TrackDetail({ id, onClose, onUpdated }: { id: string; onClose: () => void; onUpdated: () => void }) {
-  const { data, loading, error, refresh } = useApi<{ item: TrackingRecord }>(`/api/admin/tracking/${id}`, true);
+  const { data, loading, error, refresh } = useApi<{ item: TrackingRecord }>(`/api/admin/tracking/${id}`);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [carrier, setCarrier] = useState("");
   const [nextMilestone, setNextMilestone] = useState("");
@@ -197,7 +197,7 @@ function Page() {
   const [creating, setCreating] = useState(false);
 
   const path = `/api/admin/tracking?limit=300${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`;
-  const { data, loading, error, refresh } = useApi<{ items: TrackingRecord[] }>(path, true);
+  const { data, loading, error, refresh } = useApi<{ items: TrackingRecord[] }>(path);
   const rows = useMemo(() => data?.items ?? [], [data]);
 
   useEffect(() => {

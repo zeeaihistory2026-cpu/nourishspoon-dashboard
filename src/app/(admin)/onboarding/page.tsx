@@ -46,7 +46,7 @@ function PhonePreview({ slide }: { slide: OnboardingSlide | null }) {
         <Box component="img" src={slide.imageUrl} alt={slide.title} sx={{ width: "100%", height: 340, objectFit: "cover" }} />
       ) : (
         <Box sx={{ height: 340, background: "#f4e9c8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Typography sx={{ fontFamily: 'var(--font-script)', fontSize: 26, color: "#8f6b1f" }}>
+          <Typography sx={{ fontFamily: '"Pinyon Script", cursive', fontSize: 26, color: "#8f6b1f" }}>
             Nourish Spoon
           </Typography>
         </Box>

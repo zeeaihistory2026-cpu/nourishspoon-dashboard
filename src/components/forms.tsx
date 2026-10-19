@@ -46,6 +46,7 @@ export function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [urlDraft, setUrlDraft] = useState("");
 
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -75,7 +76,7 @@ export function ImageUpload({
       </Typography>
       {value ? (
         <Box sx={{ position: "relative", width: "100%", borderRadius: 2, overflow: "hidden", border: "1px solid #e7ddc2" }}>
-          <Box component="img" src={value} alt={label} sx={{ width: "100%", height: 170, objectFit: "cover", display: "block" }} />
+          <Box component="img" src={value} alt={label} sx={{ width: "100%", height: 170, objectFit: "contain", display: "block", background: "#f8f4e8" }} />
           <Button
             size="small"
             variant="contained"
@@ -102,6 +103,31 @@ export function ImageUpload({
       )}
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pick} />
       {error && <FieldError message={error} />}
+      {!value && (
+        <Box className="flex items-center gap-1" sx={{ mt: 1 }}>
+          <TextField
+            size="small"
+            fullWidth
+            placeholder="Or paste an image URL…"
+            value={urlDraft}
+            onChange={(e) => setUrlDraft(e.target.value)}
+            slotProps={{ htmlInput: { "aria-label": "Image URL" } }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={!/^https?:\/\/.+/i.test(urlDraft.trim())}
+            onClick={() => {
+              onChange(urlDraft.trim());
+              setUrlDraft("");
+              setError(null);
+            }}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Use URL
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { adminDb, docToJSON, FieldValue } from "@/lib/firebase-admin";
-import {
-  requireAdmin,
-  authErrorResponse,
-  requireAdminMutation,
-} from "@/lib/auth-server";
+import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
 import { storySchema } from "@/lib/schemas";
 
 const DOC = "ourStory";
@@ -35,7 +31,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const admin = await requireAdminMutation(req);
+    const admin = await requireAdmin();
     const parsed = storySchema.parse(await req.json());
     const ref = adminDb().collection("appContent").doc(DOC);
     await ref.set(
@@ -45,16 +41,13 @@ export async function PUT(req: Request) {
         updatedBy: admin.uid,
         updatedByEmail: (admin.email as string) ?? "",
       },
-      { merge: true },
+      { merge: true }
     );
     const snap = await ref.get();
     return Response.json({ item: docToJSON(snap) });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return Response.json(
-        { error: err.issues[0]?.message ?? "Invalid data." },
-        { status: 400 },
-      );
+      return Response.json({ error: err.issues[0]?.message ?? "Invalid data." }, { status: 400 });
     }
     return authErrorResponse(err);
   }

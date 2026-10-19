@@ -41,7 +41,7 @@ export function PageHeader({
       <Box>
         <Typography
           variant="h4"
-          sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30 }}
+          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 30 }}
         >
           {title}
         </Typography>
@@ -260,7 +260,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ fontFamily: 'var(--font-display)' }}>
+      <DialogTitle sx={{ fontFamily: '"Playfair Display", Georgia, serif' }}>
         {title}
       </DialogTitle>
       <DialogContent>
@@ -310,7 +310,7 @@ export function FormDrawer({
       <Box sx={{ width: { xs: "100vw", sm: wide ? 640 : 480 }, maxWidth: "100vw", height: "100%", display: "flex", flexDirection: "column" }}>
         <Box className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b" sx={{ borderColor: "#ece4cb" }}>
           <Box>
-            <Typography variant="h5" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
               {title}
             </Typography>
             {subtitle && (
@@ -396,10 +396,10 @@ export function Thumb({ src, alt, size = 44, circle = false }: { src?: string; a
         width: size,
         height: size,
         borderRadius: circle ? "50%" : 2,
-        objectFit: "cover",
+        objectFit: circle ? "cover" : "contain",
         flexShrink: 0,
         border: "1px solid #ece4cb",
-        background: "#fff",
+        background: "#f8f4e8",
       }}
     />
   );

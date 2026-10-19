@@ -112,11 +112,11 @@ function Page() {
           <Card key={i} sx={{ p: 2.5 }}>
             <Box className="flex items-start gap-3">
               {s.imageUrl && (
-                <Box component="img" src={s.imageUrl} alt="" sx={{ width: 120, height: 90, objectFit: "cover", borderRadius: 2, border: "1px solid #ece4cb", flexShrink: 0 }} />
+                <Box component="img" src={s.imageUrl} alt="" sx={{ width: 120, height: 90, objectFit: "contain", borderRadius: 2, border: "1px solid #ece4cb", flexShrink: 0, background: "#f8f4e8" }} />
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary" }}>SECTION {i + 1}</Typography>
-                {s.heading && <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>{s.heading}</Typography>}
+                {s.heading && <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>{s.heading}</Typography>}
                 <Typography variant="body2" sx={{ color: "text.secondary", whiteSpace: "pre-line", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
                   {s.body}
                 </Typography>
@@ -137,7 +137,7 @@ function Page() {
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} maxWidth="sm" fullWidth>
         <DialogContent sx={{ pt: 3 }} className="flex flex-col gap-3">
-          <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+          <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
             {editing === -1 ? "Add section" : "Edit section"}
           </Typography>
           <TextField size="small" fullWidth label="Heading (optional)" value={draft.heading} onChange={(e) => setDraft({ ...draft, heading: e.target.value })} />
@@ -169,8 +169,8 @@ function Page() {
             <Box sx={{ height: 620, overflowY: "auto", p: 2.5 }}>
               {sections.map((s, i) => (
                 <Box key={i} sx={{ mb: 3 }}>
-                  {s.imageUrl && <Box component="img" src={s.imageUrl} alt="" sx={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 2, mb: 1.5 }} />}
-                  {s.heading && <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>{s.heading}</Typography>}
+                  {s.imageUrl && <Box component="img" src={s.imageUrl} alt="" sx={{ width: "100%", height: 150, objectFit: "contain", borderRadius: 2, mb: 1.5, background: "#f8f4e8" }} />}
+                  {s.heading && <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, mb: 1 }}>{s.heading}</Typography>}
                   <Typography variant="body2" sx={{ color: "text.secondary", whiteSpace: "pre-line" }}>{s.body}</Typography>
                 </Box>
               ))}

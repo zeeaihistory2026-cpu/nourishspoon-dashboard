@@ -1,90 +1,153 @@
-import {
-  requireAdmin,
-  assertSameOrigin,
-  AuthError,
-  authErrorResponse,
-} from "@/lib/auth-server";
-import { adminDb, docToJSON } from "@/lib/firebase-admin";
-
 import { z } from "zod";
-import {
-  orderView,
-  trackingView,
-  customerView,
-  rows,
-  orderStates,
-  paymentStates,
-} from "@/lib/contracts";
-import { updateOrderRecord } from "@/lib/commerce-server";
-const schema = z.object({
-  orderStatus: z.enum(orderStates).optional(),
-  paymentStatus: z.enum(paymentStates).optional(),
-  deliveryFee: z.number().int().min(0).max(10000).optional(),
-  trackingNumber: z.string().max(20).optional(),
-  note: z.string().max(500).optional(),
-});
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+import { adminDb, docToJSON, FieldValue } from "@/lib/firebase-admin";
+import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
+import { orderStatusSchema } from "@/lib/schemas";
+import { isTransitionAllowed } from "../route";
+
+const MILESTONE_FOR_STATUS: Record<string, { key: string; label: string }> = {
+  placed: { key: "order_placed", label: "Order Placed" },
+  packed: { key: "packed", label: "Packed" },
+  out_for_delivery: { key: "out_for_delivery", label: "Out for Delivery" },
+  delivered: { key: "delivered", label: "Delivered" },
+  cancelled: { key: "cancelled", label: "Cancelled" },
+};
+
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
-    const { id } = await context.params;
+    const { id } = await ctx.params;
     const db = adminDb();
-    const snapshot = await db.collection("orders").doc(id).get();
-    if (!snapshot.exists) throw new AuthError(404, "Order not found.");
-    const raw = snapshot.data()!;
-    const item = orderView(id, raw);
-    const [customer, events] = await Promise.all([
-      item.userId ? db.collection("users").doc(item.userId).get() : null,
-      snapshot.ref.collection("events").orderBy("at", "desc").limit(50).get(),
+    const snap = await db.collection("orders").doc(id).get();
+    const order = docToJSON(snap);
+    if (!order) return Response.json({ error: "Order not found." }, { status: 404 });
+
+    const [customerSnap, eventsSnap, trackingSnap] = await Promise.all([
+      order.userId ? db.collection("users").doc(order.userId as string).get() : null,
+      db.collection("orders").doc(id).collection("orderEvents").orderBy("at", "desc").limit(50).get(),
+      db.collection("tracking").doc(id).get(),
     ]);
+
     return Response.json({
-      item,
-      customer: customer?.exists
-        ? customerView(customer.id, customer.data()!)
-        : null,
-      tracking: trackingView(id, raw),
-      events: events.empty
-        ? rows(raw.status_history)
-            .map((event, index) => ({
-              id: String(index),
-              to: event.status,
-              at: event.at,
-            }))
-            .reverse()
-        : events.docs.map(docToJSON),
+      item: order,
+      customer: customerSnap?.exists ? docToJSON(customerSnap) : null,
+      events: eventsSnap.docs.map((d) => docToJSON(d)),
+      tracking: trackingSnap.exists ? docToJSON(trackingSnap) : null,
     });
-  } catch (error) {
-    return authErrorResponse(error);
+  } catch (err) {
+    return authErrorResponse(err);
   }
 }
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    assertSameOrigin(request);
     const admin = await requireAdmin();
-    const { id } = await context.params;
-    const input = schema.parse(await request.json());
-    const updated = await updateOrderRecord(
-      {
-        id,
-        status: input.orderStatus,
-        payment_status: input.paymentStatus,
-        ...(input.deliveryFee !== undefined
-          ? { delivery_fee: input.deliveryFee }
-          : {}),
-        ...(input.trackingNumber !== undefined
-          ? { tracking_number: input.trackingNumber }
-          : {}),
-        note: input.note,
-      },
-      admin,
-    );
-    return Response.json({ item: orderView(id, updated) });
-  } catch (error) {
-    return authErrorResponse(error);
+    const { id } = await ctx.params;
+    const body = await req.json();
+    const parsed = orderStatusSchema.parse(body);
+
+    const db = adminDb();
+    const ref = db.collection("orders").doc(id);
+    const snap = await ref.get();
+    const order = docToJSON(snap);
+    if (!order) return Response.json({ error: "Order not found." }, { status: 404 });
+
+    const from = (order.orderStatus as string) ?? "placed";
+    const to = parsed.orderStatus;
+    if (!isTransitionAllowed(from, to)) {
+      return Response.json(
+        { error: `Cannot move order from "${from}" to "${to}".` },
+        { status: 400 }
+      );
+    }
+
+    const batch = db.batch();
+    const updates: Record<string, unknown> = {
+      orderStatus: to,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: admin.uid,
+    };
+    if (parsed.paymentStatus) updates.paymentStatus = parsed.paymentStatus;
+    batch.update(ref, updates);
+
+    // Immutable event log (PRD 18).
+    const eventRef = ref.collection("orderEvents").doc();
+    batch.set(eventRef, {
+      from,
+      to,
+      note: parsed.note ?? "",
+      by: admin.uid,
+      byEmail: (admin.email as string) ?? "",
+      at: FieldValue.serverTimestamp(),
+    });
+
+    // Keep the customer-facing tracking record in sync.
+    const milestone = MILESTONE_FOR_STATUS[to];
+    if (milestone) {
+      const trackRef = db.collection("tracking").doc(id);
+      const trackSnap = await trackRef.get();
+      const entry = {
+        key: milestone.key,
+        label: milestone.label,
+        at: FieldValue.serverTimestamp(),
+        by: admin.uid,
+      };
+      if (trackSnap.exists) {
+        batch.update(trackRef, {
+          current: milestone.key,
+          milestones: FieldValue.arrayUnion(entry),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: admin.uid,
+        });
+      } else {
+        batch.set(trackRef, {
+          orderId: id,
+          orderNumber: (order.orderNumber as string) ?? id.slice(0, 8).toUpperCase(),
+          customerName: (order.customerName as string) ?? "",
+          trackingNumber: "",
+          carrier: "",
+          current: milestone.key,
+          milestones: [entry],
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: admin.uid,
+        });
+      }
+    }
+
+    // Save TCS/custom tracking number if provided.
+    if (parsed.trackingNumber !== undefined) {
+      const trackRef = db.collection("tracking").doc(id);
+      const trackSnap = await trackRef.get();
+      if (trackSnap.exists) {
+        batch.update(trackRef, {
+          trackingNumber: parsed.trackingNumber,
+          carrier: "TCS",
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: admin.uid,
+        });
+      } else {
+        batch.set(trackRef, {
+          orderId: id,
+          orderNumber: (order.orderNumber as string) ?? id.slice(0, 8).toUpperCase(),
+          customerName: (order.customerName as string) ?? "",
+          trackingNumber: parsed.trackingNumber,
+          carrier: "TCS",
+          current: milestone?.key ?? "placed",
+          milestones: [],
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: admin.uid,
+        });
+      }
+    }
+
+    await batch.commit();
+    const updated = await ref.get();
+    return Response.json({ item: docToJSON(updated) });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return Response.json({ error: err.issues[0]?.message ?? "Invalid data." }, { status: 400 });
+    }
+    return authErrorResponse(err);
   }
 }

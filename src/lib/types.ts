@@ -13,15 +13,7 @@ export interface ProductVariant {
 }
 
 export interface ProductBenefit {
-  icon:
-    | "droplet"
-    | "sprout"
-    | "wheat"
-    | "sparkles"
-    | "leaf"
-    | "jar"
-    | "bowl"
-    | "shield";
+  icon: "droplet" | "sprout" | "wheat" | "sparkles" | "leaf" | "jar" | "bowl" | "shield";
   label: string;
 }
 
@@ -42,7 +34,7 @@ export interface Product {
   compareAtPrice?: number;
   variants: ProductVariant[];
   weight: string;
-  stock: number | null;
+  stock: number;
   images: string[];
   ingredients: Ingredient[];
   benefits: ProductBenefit[];
@@ -67,9 +59,8 @@ export interface Category {
 }
 
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "preparing"
+  | "placed"
+  | "packed"
   | "out_for_delivery"
   | "delivered"
   | "cancelled";
@@ -92,14 +83,11 @@ export interface Order {
   customerPhone?: string;
   items: OrderItem[];
   subtotal: number;
-  deliveryFee: number | null;
-  deliveryMethod: string;
-  trackingNumber: string;
-  quotePending: boolean;
+  deliveryFee: number;
   discount?: number;
-  total: number | null;
-  paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash";
-  paymentStatus: "awaiting_payment" | "submitted" | "paid" | "refunded";
+  total: number;
+  paymentMethod: "cod" | "bank_transfer";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   orderStatus: OrderStatus;
   shippingAddress: {
     label: string;
@@ -243,7 +231,7 @@ export interface AdminNotification {
   body: string;
   imageUrl?: string;
   deepLink?: string;
-  audience: "all";
+  audience: "all" | "segment";
   segment?: string;
   status: "draft" | "sent" | "archived";
   createdBy: string;
@@ -252,7 +240,6 @@ export interface AdminNotification {
   sentAt?: ISODate | null;
   sentCount?: number;
   failedCount?: number;
-  recipientCount?: number;
 }
 
 export interface PaymentMethodRecord {
@@ -311,12 +298,7 @@ export interface HomeContent {
     isActive: boolean;
   };
   bestSellerIds: string[];
-  productTabs: {
-    key: string;
-    label: string;
-    icon?: string;
-    isActive: boolean;
-  }[];
+  productTabs: { key: string; label: string; icon?: string; isActive: boolean }[];
   sectionOrder: string[];
   updatedAt?: ISODate | null;
   updatedBy?: string;

@@ -7,7 +7,6 @@ const STATUSES = [
   "delivered",
   "cancelled",
 ];
-const { deliveryCharge } = require("../lib/delivery");
 function text(value, label, max = 200) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max)
     throw new Error(`Enter a valid ${label}.`);
@@ -24,7 +23,7 @@ function address(input) {
     line: text(input.line, "address", 300),
   };
 }
-function priceOrder(lines, products, _settings, method) {
+function priceOrder(lines, products, settings, method, firstOrder) {
   if (!Array.isArray(lines) || !lines.length || lines.length > 10)
     throw new Error("Choose between 1 and 10 items.");
   if (!["tcs_nationwide", "sargodha_sameday", "self_pickup"].includes(method))
@@ -47,7 +46,11 @@ function priceOrder(lines, products, _settings, method) {
     if (variant.stock != null && variant.stock < line.quantity)
       throw new Error(`${product.name} has insufficient stock.`);
     const unit_price = variant.sale_price ?? variant.regular_price;
-    if (!Number.isSafeInteger(unit_price) || unit_price <= 0)
+    if (
+      !Number.isSafeInteger(unit_price) ||
+      unit_price <= 0 ||
+      !Number.isSafeInteger(unit_price * line.quantity)
+    )
       throw new Error("A product price needs confirmation.");
     return {
       product_id: product.id,
@@ -60,6 +63,8 @@ function priceOrder(lines, products, _settings, method) {
     };
   });
   const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+  if (!Number.isSafeInteger(subtotal))
+    throw new Error("The order total is too large.");
   for (const product of products) {
     const quantity = items
       .filter((item) => item.product_id === product.id)
@@ -67,14 +72,26 @@ function priceOrder(lines, products, _settings, method) {
     if (product.legacy_stock != null && quantity > product.legacy_stock)
       throw new Error(`${product.name} has insufficient stock.`);
   }
-  const delivery_fee = deliveryCharge(subtotal, method);
+  const free =
+    method === "self_pickup" ||
+    (settings.first_order_free_delivery === true &&
+      firstOrder &&
+      subtotal >= 2500);
+  const configuredFee = settings.delivery_fees?.[method];
+  const delivery_fee = free
+    ? 0
+    : Number.isSafeInteger(configuredFee) && configuredFee >= 0
+      ? configuredFee
+      : null;
+  if (delivery_fee !== null && !Number.isSafeInteger(subtotal + delivery_fee))
+    throw new Error("The order total is too large.");
   return {
     items,
     subtotal,
     discount: 0,
     delivery_fee,
-    total: subtotal + delivery_fee,
-    quote_pending: false,
+    total: delivery_fee === null ? null : subtotal + delivery_fee,
+    quote_pending: delivery_fee === null,
   };
 }
 function statusChange(from, to) {

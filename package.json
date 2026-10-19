@@ -1,13 +1,11 @@
 {
   "name": "nourish-spoon-admin",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test:runtime": "node --no-experimental-require-module -e \"require('firebase-admin/auth')\""
+    "start": "next start"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -34,7 +32,6 @@
     "typescript": "^5"
   },
   "overrides": {
-    "jwks-rsa": { "jose": "^5.10.0" },
-    "@grpc/grpc-js": "^1.14.6"
+    "jose": "4.15.9"
   }
 }

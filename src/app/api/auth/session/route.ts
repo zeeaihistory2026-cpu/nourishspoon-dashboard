@@ -1,39 +1,66 @@
 import { cookies } from "next/headers";
-import { z } from "zod";
 import { adminAuth } from "@/lib/firebase-admin";
-import {
-  SESSION_COOKIE,
-  allowedAdmin,
-  assertSameOrigin,
-  AuthError,
-  authErrorResponse,
-} from "@/lib/auth-server";
-export async function POST(request: Request) {
+import { SESSION_COOKIE, adminAllowlist } from "@/lib/auth-server";
+import { getAccessRecord } from "@/lib/access";
+
+/**
+ * Exchange a Firebase ID token (from client sign-in) for an httpOnly
+ * session cookie. Also bootstraps the `admin` custom claim for emails on
+ * the ADMIN_EMAILS allowlist, so Firestore rules recognise the admin too.
+ */
+export async function POST(req: Request) {
   try {
-    assertSameOrigin(request);
-    const { idToken } = z
-      .object({ idToken: z.string().min(1).max(10000) })
-      .parse(await request.json());
+    const { idToken } = (await req.json()) as { idToken?: string };
+    if (!idToken) return Response.json({ error: "Missing ID token." }, { status: 400 });
+
     const auth = adminAuth();
-    const account = await auth.verifyIdToken(idToken, true);
-    if (!allowedAdmin(account))
-      throw new AuthError(403, "Verified administrator access is required.");
-    if (!account.auth_time || Date.now() / 1000 - account.auth_time > 300)
-      throw new AuthError(
-        401,
-        "Please sign in again to start a dashboard session.",
+    const decoded = await auth.verifyIdToken(idToken, true);
+    const email = (decoded.email ?? "").toLowerCase();
+    const allowlist = adminAllowlist();
+    const isAllowlisted = email !== "" && allowlist.includes(email);
+    const hasClaim = decoded.admin === true;
+    // Users granted access via the User Access page (adminAccess) must also
+    // be able to sign in — requireAdmin() resolves them per-request, so the
+    // session exchange has to admit them here. Never bootstrap the `admin`
+    // custom claim for them: child accounts must not carry it.
+    const accessRecord = !isAllowlisted && !hasClaim && email !== ""
+      ? await getAccessRecord(email).catch(() => null)
+      : null;
+
+    if (!isAllowlisted && !hasClaim && !accessRecord) {
+      return Response.json(
+        { error: "This account is not authorised for the admin dashboard." },
+        { status: 403 }
       );
-    const expiresIn = 8 * 60 * 60 * 1000;
-    const session = await auth.createSessionCookie(idToken, { expiresIn });
-    (await cookies()).set(SESSION_COOKIE, session, {
+    }
+
+    // Bootstrap the custom claim once for allowlisted emails.
+    // Narrowly constructed: only the admin flag, never the decoded token payload.
+    if (isAllowlisted && !hasClaim) {
+      await auth.setCustomUserClaims(decoded.uid, { admin: true });
+    }
+
+    const expiresIn = 5 * 24 * 60 * 60 * 1000; // 5 days
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
+
+    const store = await cookies();
+    store.set(SESSION_COOKIE, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: expiresIn / 1000,
     });
-    return Response.json({ ok: true });
-  } catch (error) {
-    return authErrorResponse(error);
+
+    return Response.json({ ok: true, email: decoded.email, name: decoded.name ?? null });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("not configured")) {
+      return Response.json(
+        { error: "Server is not connected to Firebase yet." },
+        { status: 503 }
+      );
+    }
+    console.error("[auth/session]", err);
+    return Response.json({ error: "Sign-in failed. Please try again." }, { status: 401 });
   }
 }

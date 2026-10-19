@@ -13,18 +13,8 @@ export const pine = {
 export const theme = createTheme({
   palette: {
     mode: "light",
-    primary: {
-      main: pine[900],
-      dark: pine[950],
-      light: pine[700],
-      contrastText: "#fffdf7",
-    },
-    secondary: {
-      main: "#b08a2e",
-      dark: "#8f6b1f",
-      light: "#d9b95c",
-      contrastText: "#fffdf7",
-    },
+    primary: { main: pine[900], dark: pine[950], light: pine[700], contrastText: "#fffdf7" },
+    secondary: { main: "#b08a2e", dark: "#8f6b1f", light: "#d9b95c", contrastText: "#fffdf7" },
     success: { main: "#2e7d4f" },
     warning: { main: "#b8860b" },
     error: { main: "#c0392b" },
@@ -34,13 +24,13 @@ export const theme = createTheme({
     divider: "#e7ddc2",
   },
   typography: {
-    fontFamily: "var(--font-sans)",
-    h1: { fontFamily: "var(--font-display)", fontWeight: 700 },
-    h2: { fontFamily: "var(--font-display)", fontWeight: 700 },
-    h3: { fontFamily: "var(--font-display)", fontWeight: 700 },
-    h4: { fontFamily: "var(--font-display)", fontWeight: 600 },
-    h5: { fontFamily: "var(--font-display)", fontWeight: 600 },
-    h6: { fontFamily: "var(--font-display)", fontWeight: 600 },
+    fontFamily: '"Nunito Sans", "Segoe UI", system-ui, sans-serif',
+    h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 },
+    h2: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 },
+    h3: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 },
+    h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600 },
+    h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600 },
+    h6: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600 },
     button: { textTransform: "none", fontWeight: 700 },
   },
   shape: { borderRadius: 12 },
@@ -63,10 +53,7 @@ export const theme = createTheme({
           "&.MuiButton-outlinedPrimary": {
             borderColor: "#cfc49e",
             color: pine[900],
-            "&:hover": {
-              borderColor: pine[900],
-              backgroundColor: "rgba(27,58,40,0.04)",
-            },
+            "&:hover": { borderColor: pine[900], backgroundColor: "rgba(27,58,40,0.04)" },
           },
         },
       },
@@ -82,9 +69,7 @@ export const theme = createTheme({
         },
       },
     },
-    MuiChip: {
-      styleOverrides: { root: { fontWeight: 700, borderRadius: 999 } },
-    },
+    MuiChip: { styleOverrides: { root: { fontWeight: 700, borderRadius: 999 } } },
     MuiTextField: {
       styleOverrides: {
         root: {
@@ -111,14 +96,10 @@ export const theme = createTheme({
       },
     },
     MuiDialog: {
-      styleOverrides: {
-        paper: { borderRadius: 18, backgroundColor: "#fffdf7" },
-      },
+      styleOverrides: { paper: { borderRadius: 18, backgroundColor: "#fffdf7" } },
     },
     MuiDrawer: {
-      styleOverrides: {
-        paper: { backgroundColor: "#fffdf7", borderRadius: "18px 0 0 18px" },
-      },
+      styleOverrides: { paper: { backgroundColor: "#fffdf7", borderRadius: "18px 0 0 18px" } },
     },
     MuiSwitch: {
       styleOverrides: {

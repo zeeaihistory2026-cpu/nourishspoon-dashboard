@@ -64,7 +64,7 @@ const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boo
   { href: "/track-orders", label: "Track Order", icon: <LocationOnOutlined /> },
   { href: "/offers-points", label: "Offers & Points", icon: <LocalOfferOutlined /> },
   { href: "/refer-earn", label: "Refer & Earn", icon: <PeopleOutline /> },
-  { href: "/notifications", label: "Notifications", icon: <NotificationsNoneOutlined /> },
+  { href: "/notifications", label: "Notifications", icon: <NotificationsNoneOutlined />, badge: "3" },
   { href: "/payment-methods", label: "Payment Methods", icon: <CreditCardOutlined /> },
   { href: "/delivery-information", label: "Delivery Information", icon: <LocalShippingOutlined /> },
   { href: "/faq", label: "FAQ / Help & Support", icon: <HelpOutline /> },

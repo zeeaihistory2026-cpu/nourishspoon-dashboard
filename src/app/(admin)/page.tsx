@@ -12,6 +12,7 @@ import {
   MenuItem,
   Switch,
   Typography,
+  IconButton,
 } from "@mui/material";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import ShoppingCartOutlined from "@mui/icons-material/ShoppingCartOutlined";
@@ -36,6 +37,13 @@ import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SpaOutlined from "@mui/icons-material/SpaOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
+import ReceiptOutlined from "@mui/icons-material/ReceiptOutlined";
+import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
+import CalculateOutlined from "@mui/icons-material/CalculateOutlined";
+import PersonAddOutlined from "@mui/icons-material/PersonAddOutlined";
+import EmojiEventsOutlined from "@mui/icons-material/EmojiEventsOutlined";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightIcon from "@mui/icons-material/ChevronRightOutlined";
 import InboxOutlined from "@mui/icons-material/InboxOutlined";
 import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { useApi, api } from "@/lib/api";
@@ -403,6 +411,13 @@ export default function DashboardPage() {
     points: (data?.weeklySales ?? []).map((d) => ({ label: d.label, revenue: d.revenue, orders: d.orders })),
   };
 
+  // Top performing day (highest revenue in the week).
+  const topDay = (salesData.points || []).reduce(
+    (best: { label: string; revenue: number; orders: number }, p: { label: string; revenue: number; orders: number }) =>
+      p.revenue > best.revenue ? p : best,
+    { label: "—", revenue: 0, orders: 0 }
+  );
+
   return (
     <Box className="flex flex-col gap-5">
       {/* Welcome heading — with script flourish top-right */}
@@ -500,39 +515,9 @@ export default function DashboardPage() {
               }
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, alignItems: "stretch" }}>
-              <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2, height: "100%" }}>
-                <Box
-                  sx={{
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    width: "100%",
-                    position: "relative",
-                    border: "1px solid #ece4cb",
-                  }}
-                >
-                  <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "auto", display: "block" }} />
-                </Box>
-                <Box className="flex items-center gap-1.5">
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<EditIcon sx={{ fontSize: 14 }} />}
-                    onClick={() => router.push("/home-content")}
-                    sx={{ px: 2, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<VisibilityOutlined sx={{ fontSize: 14 }} />}
-                    onClick={() => router.push("/home-content?preview=1")}
-                    sx={{ px: 1.6, py: 0.7, fontSize: 12.5, borderRadius: 99 }}
-                  >
-                    Preview
-                  </Button>
-                </Box>
-              </Card>
+              <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
+                <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </HomeSectionCard>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
@@ -586,10 +571,10 @@ export default function DashboardPage() {
             <SectionHead title="Recent Orders" action={<ViewAll href="/orders" />} />
             <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
               <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560, height: "100%" }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 480, height: "100%" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      {["# Order ID", "Customer", "Items", "Amount", "Status"].map((h, i) => (
+                      {["# Order ID", "Customer", "Items", "Amount"].map((h, i) => (
                         <th key={i} style={{ textAlign: "left", padding: "12px 10px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
@@ -601,12 +586,11 @@ export default function DashboardPage() {
                         <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{o.customer}</td>
                         <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum">{o.items} {o.items === 1 ? "item" : "items"}</td>
                         <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum font-bold">{rs(o.amount)}</td>
-                        <td style={{ padding: "11px 10px" }}><StatusChip status={o.status} /></td>
                       </tr>
                     ))}
                     {!(data?.recentOrders ?? []).length && (
                       <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
+                        <td colSpan={4} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
                           {loading ? (
                             <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
                           ) : (
@@ -675,7 +659,7 @@ export default function DashboardPage() {
         </Box>
       </Box>
 
-      {/* Weekly Sales — line chart + decorative panel */}
+      {/* Weekly Sales — redesigned to match the shared design */}
       <Box>
         <SectionHead
           title="Weekly Sales"
@@ -691,43 +675,61 @@ export default function DashboardPage() {
           }
         />
         <Card sx={{ p: { xs: 2, md: 2.5 }, overflow: "hidden" }}>
-          <Box className="flex gap-4" sx={{ flexDirection: { xs: "column", md: "row" } }}>
+          <Box className="flex gap-4" sx={{ flexDirection: { xs: "column", lg: "row" } }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box className="flex items-baseline gap-2 flex-wrap">
+              <Box className="flex items-center gap-2 flex-wrap">
                 <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 26, lineHeight: 1.1 }}>
                   {rs(salesData.total)}
                 </Typography>
-                <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-                  {salesData.orders} order{salesData.orders === 1 ? "" : "s"} · last 7 days
+                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: "#2e7d4f", background: "#e9f5ec", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
+                  <TrendingUpIcon sx={{ fontSize: 13 }} /> +{salesData.delta}% <span style={{ fontWeight: 600 }}>vs previous week</span>
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: salesData.delta >= 0 ? "#2e7d4f" : "#c0392b", background: salesData.delta >= 0 ? "#e9f5ec" : "#fbe9e7", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
-                  {salesData.delta >= 0 ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />} {salesData.delta >= 0 ? "+" : ""}{salesData.delta}% <span style={{ fontWeight: 600, color: "#57523f" }}>vs previous week</span>
-                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 0.5 }}>
+                {salesData.orders} order{salesData.orders === 1 ? "" : "s"} · last 7 days
+              </Typography>
+              {/* Stat chips */}
+              <Box className="flex gap-2 flex-wrap" sx={{ mt: 1.5 }}>
+                {[
+                  { icon: <ReceiptOutlined sx={{ fontSize: 16 }} />, value: String(salesData.orders), label: "Orders" },
+                  { icon: <PaymentsOutlined sx={{ fontSize: 16 }} />, value: rs(salesData.total), label: "Revenue" },
+                  { icon: <CalculateOutlined sx={{ fontSize: 16 }} />, value: rs(salesData.orders ? Math.round(salesData.total / salesData.orders) : 0), label: "Avg. Order Value" },
+                  { icon: <PersonAddOutlined sx={{ fontSize: 16 }} />, value: "0", label: "New Customers" },
+                ].map((s, i) => (
+                  <Box key={i} className="flex items-center gap-1.5" sx={{ background: "#fffdf7", border: "1px solid #ece4cb", borderRadius: 2, px: 1.4, py: 1 }}>
+                    <Box sx={{ color: "#2e7d4f" }}>{s.icon}</Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{s.value}</Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 10.5 }}>{s.label}</Typography>
+                    </Box>
+                  </Box>
+                ))}
               </Box>
               <Box sx={{ mt: 2 }}>
                 <SalesChart points={salesData.points} />
               </Box>
-              {salesData.total === 0 && !loading && (
-                <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 1, textAlign: "center" }}>
-                  No orders this week yet — new orders will appear here automatically.
-                </Typography>
-              )}
             </Box>
-            <Box sx={{ width: { xs: "100%", md: 190 }, flexShrink: 0, display: { xs: "none", md: "flex" }, flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 1, position: "relative" }}>
-              <Typography
-                sx={{
-                  fontFamily: '"Pinyon Script", cursive',
-                  color: "#b08a2e",
-                  fontSize: 30,
-                  lineHeight: 1.05,
-                  textAlign: "right",
-                }}
-              >
-                Small Bites
-                <br />
-                Bigger Wellness
-              </Typography>
-              <Box component="img" src="/assets/brand/home-hero.jpg" alt="Energy balls" sx={{ width: 150, height: 110, borderRadius: 3, objectFit: "cover", border: "1px solid #ece4cb" }} />
+            {/* Top Performing Day */}
+            <Box sx={{ width: { xs: "100%", lg: 210 }, flexShrink: 0 }}>
+              <Box sx={{ background: "#fffdf7", border: "1px solid #ece4cb", borderRadius: 3, p: 2, height: "100%" }}>
+                <Box className="flex items-center gap-1" sx={{ mb: 1.5 }}>
+                  <EmojiEventsOutlined sx={{ fontSize: 18, color: "#b08a2e" }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: 13 }}>Top Performing Day</Typography>
+                </Box>
+                <Box className="flex items-center justify-between">
+                  <IconButton size="small" sx={{ border: "1px solid #ece4cb", background: "#fff" }}>
+                    <ChevronLeftIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <Box sx={{ textAlign: "center" }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: 15 }}>{topDay.label}</Typography>
+                    <Typography variant="body2" sx={{ fontSize: 12.5, mt: 0.3 }}>{rs(topDay.revenue)} in sales</Typography>
+                    <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5 }}>{topDay.orders} order{topDay.orders === 1 ? "" : "s"}</Typography>
+                  </Box>
+                  <IconButton size="small" sx={{ border: "1px solid #ece4cb", background: "#fff" }}>
+                    <ChevronRightIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              </Box>
             </Box>
           </Box>
         </Card>

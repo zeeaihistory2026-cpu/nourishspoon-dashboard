@@ -501,7 +501,7 @@ export default function DashboardPage() {
             />
             <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" } }}>
               <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/hero-branded.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </HomeSectionCard>
               <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
                 <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />

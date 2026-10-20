@@ -267,12 +267,16 @@ export function trackingView(id: string, raw: Data) {
 export function reviewView(id: string, raw: Data) {
   return {
     id,
+    photoUrl: raw.has_photo ? `/api/admin/reviews/${id}/photo` : undefined,
     productId: raw.product_id ?? raw.productId,
     productName: raw.product_name ?? raw.productName,
     userId: raw.customer_uid ?? raw.userId,
     userName: raw.customer_name ?? raw.userName,
     rating: raw.rating,
     comment: raw.comment,
+    city: raw.location ?? raw.city,
+    moderatedBy: raw.moderated_by ?? raw.moderatedBy,
+    moderatedAt: iso(raw.moderated_at ?? raw.moderatedAt),
     verifiedPurchase:
       raw.verified ?? raw.verified_purchase ?? raw.verifiedPurchase ?? false,
     visibility:

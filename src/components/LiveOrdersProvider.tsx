@@ -33,12 +33,23 @@ export function LiveOrdersProvider({
     let stopReceived: (() => void) | undefined;
     let stopCustomers: (() => void) | undefined;
     let stopOrders: (() => void) | undefined;
+    let stopReviews: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(getFirebaseAuth(), (user) => {
       stopOrders?.();
       stopCustomers?.();
       stopReceived?.();
+      stopReviews?.();
       setConnected(false);
       if (!user) return;
+      stopReviews = onSnapshot(
+        query(
+          collection(getFirebaseDatabase(), "reviews"),
+          orderBy("updated_at", "desc"),
+          limit(1),
+        ),
+        () => setRevision((value) => value + 1),
+        () => {},
+      );
       stopCustomers = onSnapshot(
         query(
           collection(getFirebaseDatabase(), "users"),
@@ -94,6 +105,7 @@ export function LiveOrdersProvider({
       stopOrders?.();
       stopCustomers?.();
       stopReceived?.();
+      stopReviews?.();
     };
   }, []);
   return (

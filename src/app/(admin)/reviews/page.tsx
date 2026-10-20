@@ -1,24 +1,25 @@
 "use client";
 
-import { ErrorState,PageHeader,StatusChip,Thumb } from "@/components/ui";
-import { api,useApi } from "@/lib/api";
+import { ErrorState, PageHeader, StatusChip, Thumb } from "@/components/ui";
+import { api, useApi } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
-import type { Review,ReviewVisibility } from "@/lib/types";
+import type { Review, ReviewVisibility } from "@/lib/types";
 import SearchIcon from "@mui/icons-material/SearchOutlined";
 import StarIcon from "@mui/icons-material/StarOutlined";
 import {
-Box,
-Button,
-Card,
-Chip,
-InputAdornment,
-TextField,
-Typography
+  Box,
+  Button,
+  Card,
+  Chip,
+  InputAdornment,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { Suspense,useMemo,useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 const VIS: { value: string; label: string }[] = [
   { value: "", label: "All" },
+  { value: "pending", label: "Pending approval" },
   { value: "visible", label: "Visible" },
   { value: "hidden", label: "Hidden" },
   { value: "featured", label: "Featured" },
@@ -29,7 +30,10 @@ function Stars({ n }: { n: number }) {
   return (
     <Box className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
-        <StarIcon key={i} sx={{ fontSize: 15, color: i <= n ? "#c9a227" : "#ddd2b2" }} />
+        <StarIcon
+          key={i}
+          sx={{ fontSize: 15, color: i <= n ? "#c9a227" : "#ddd2b2" }}
+        />
       ))}
     </Box>
   );
@@ -40,19 +44,38 @@ function Page() {
   const [visibility, setVisibility] = useState("");
 
   const path = `/api/admin/reviews?limit=300${visibility ? `&visibility=${visibility}` : ""}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`;
-  const { data, loading, error, refresh } = useApi<{ items: Review[] }>(path);
+  const { data, loading, error, refresh } = useApi<{ items: Review[] }>(
+    path,
+    true,
+  );
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState("");
   const rows = useMemo(() => data?.items ?? [], [data]);
 
   async function moderate(r: Review, v: ReviewVisibility) {
+    if (saving || v === "pending") return;
+    setSaving(r.id);
+    setSaveError("");
     try {
-      await api(`/api/admin/reviews/${r.id}`, { method: "PATCH", body: JSON.stringify({ visibility: v }) });
+      await api(`/api/admin/reviews/${r.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ visibility: v }),
+      });
       refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed.");
+      setSaveError(e instanceof Error ? e.message : "Update failed.");
+    } finally {
+      setSaving(null);
     }
   }
 
-  if (error) return (<><PageHeader title="Reviews" /><ErrorState message={error} onRetry={refresh} /></>);
+  if (error)
+    return (
+      <>
+        <PageHeader title="Reviews" />
+        <ErrorState message={error} onRetry={refresh} />
+      </>
+    );
 
   return (
     <Box>
@@ -60,6 +83,12 @@ function Page() {
         title="Reviews"
         subtitle="Moderate customer reviews. Original review text is never altered."
       />
+
+      {!!saveError && (
+        <Typography role="alert" color="error" sx={{ mb: 2 }}>
+          {saveError}
+        </Typography>
+      )}
 
       <Box className="flex flex-wrap gap-2 mb-3">
         {VIS.map((v) => (
@@ -86,62 +115,122 @@ function Page() {
           onChange={(e) => setSearch(e.target.value)}
           sx={{ maxWidth: 440, width: "100%" }}
           slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#8d8670", fontSize: 19 }} />
-                  </InputAdornment>
-                ),
-              },
-              }}
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: "#8d8670", fontSize: 19 }} />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
       </Card>
 
-      <Box className="grid gap-3" sx={{ gridTemplateColumns: { xs: "1fr", xl: "1fr 1fr" } }}>
-        {loading && <Card sx={{ p: 4, textAlign: "center", color: "text.secondary" }}>Loading reviews...</Card>}
+      <Box
+        className="grid gap-3"
+        sx={{ gridTemplateColumns: { xs: "1fr", xl: "1fr 1fr" } }}
+      >
+        {loading && !data && (
+          <Card sx={{ p: 4, textAlign: "center", color: "text.secondary" }}>
+            Loading reviews...
+          </Card>
+        )}
         {rows.map((r) => (
           <Card key={r.id} sx={{ p: 2.5 }}>
             <Box className="flex items-start justify-between gap-3">
               <Box className="flex items-center gap-2.5">
-                <Thumb src={r.productImage as string} alt={r.productName} size={44} />
+                <Thumb
+                  src={r.productImage as string}
+                  alt={r.productName}
+                  size={44}
+                />
                 <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{r.productName}</Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                    {r.userName}{r.city ? ` · ${r.city}` : ""} · {fmtDate(r.createdAt)}
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                    {r.productName}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {r.userName}
+                    {r.city ? ` · ${r.city}` : ""} · {fmtDate(r.createdAt)}
                     {r.verifiedPurchase ? " · Verified purchase" : ""}
                   </Typography>
                 </Box>
               </Box>
               <StatusChip status={r.visibility ?? "visible"} />
             </Box>
-            <Box sx={{ mt: 1.5 }}><Stars n={r.rating} /></Box>
-            <Typography variant="body2" sx={{ mt: 1, whiteSpace: "pre-line" }}>{r.comment}</Typography>
+            <Box sx={{ mt: 1.5 }}>
+              <Stars n={r.rating} />
+            </Box>
+            <Typography variant="body2" sx={{ mt: 1, whiteSpace: "pre-line" }}>
+              {r.comment}
+            </Typography>
+            {r.photoUrl && (
+              <Box
+                component="img"
+                src={r.photoUrl}
+                alt={`Review photo from ${r.userName}`}
+                loading="lazy"
+                sx={{
+                  mt: 2,
+                  width: "100%",
+                  maxHeight: 280,
+                  objectFit: "contain",
+                  borderRadius: 2,
+                  background: "#f8f3e8",
+                }}
+              />
+            )}
             <Box className="flex items-center gap-2 mt-3 flex-wrap">
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700, mr: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{ color: "text.secondary", fontWeight: 700, mr: 1 }}
+              >
                 Visibility:
               </Typography>
-              {(["visible", "featured", "hidden", "removed"] as ReviewVisibility[]).map((v) => (
+              {(
+                [
+                  "visible",
+                  "featured",
+                  "hidden",
+                  "removed",
+                ] as ReviewVisibility[]
+              ).map((v) => (
                 <Button
                   key={v}
+                  disabled={saving !== null}
                   size="small"
-                  variant={(r.visibility ?? "visible") === v ? "contained" : "outlined"}
+                  variant={
+                    (r.visibility ?? "visible") === v ? "contained" : "outlined"
+                  }
                   onClick={() => moderate(r, v)}
                   sx={{ py: 0.4, px: 1.5, fontSize: 12 }}
                   color={v === "removed" ? "error" : "primary"}
                 >
-                  {v}
+                  {saving === r.id
+                    ? "Saving…"
+                    : v === "visible"
+                      ? "Approve"
+                      : v}
                 </Button>
               ))}
             </Box>
             {r.moderatedAt && (
-              <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>
-                Moderated {fmtDate(r.moderatedAt)}{r.moderatedBy ? " by admin" : ""}
+              <Typography
+                variant="caption"
+                sx={{ color: "text.secondary", display: "block", mt: 1 }}
+              >
+                Moderated {fmtDate(r.moderatedAt)}
+                {r.moderatedBy ? " by admin" : ""}
               </Typography>
             )}
           </Card>
         ))}
         {!loading && !rows.length && (
-          <Card sx={{ p: 5, textAlign: "center", color: "text.secondary" }}>No reviews found.</Card>
+          <Card sx={{ p: 5, textAlign: "center", color: "text.secondary" }}>
+            No reviews found.
+          </Card>
         )}
       </Box>
     </Box>

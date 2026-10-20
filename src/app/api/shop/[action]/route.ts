@@ -10,6 +10,7 @@ const actions = new Set([
   "getRewards",
   "applyReferral",
   "submitReview",
+  "saveProfilePhoto",
   "registerDevice",
   "unregisterDevice",
 ]);
@@ -67,7 +68,10 @@ export async function POST(
     if (token.firebase?.sign_in_provider === "anonymous")
       throw new AuthError(401, "Please sign in first.");
     const text = await request.text();
-    if (text.length > 64000)
+    if (
+      text.length >
+      (["submitReview", "saveProfilePhoto"].includes(action) ? 190000 : 64000)
+    )
       throw new AuthError(413, "Checkout details are too large.");
     let input;
     try {

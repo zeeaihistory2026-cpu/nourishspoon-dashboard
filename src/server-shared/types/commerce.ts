@@ -58,7 +58,7 @@ export type OrderNotice = {
   id: string;
   title: string;
   body: string;
-  order_id: string;
+  order_id?: string;
   created_at: string;
   read: boolean;
 };

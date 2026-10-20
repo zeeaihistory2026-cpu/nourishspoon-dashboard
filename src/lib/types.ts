@@ -179,10 +179,12 @@ export interface WishlistItem {
   addedAt?: ISODate | null;
 }
 
-export type ReviewVisibility = "visible" | "hidden" | "featured" | "removed";
+export type ReviewVisibility =
+  "pending" | "visible" | "hidden" | "featured" | "removed";
 
 export interface Review {
   id: string;
+  photoUrl?: string;
   productId: string;
   productName: string;
   productImage?: string;

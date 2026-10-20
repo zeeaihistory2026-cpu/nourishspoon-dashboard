@@ -2,6 +2,7 @@ import "server-only";
 import createRewards from "../server-shared/commerce/rewards.js";
 import { createOrderPlacer } from "../server-shared/commerce/customerOrders.js";
 import { createReviewSubmitter } from "../server-shared/commerce/customerReviews.js";
+import { saveProfilePhoto } from "../server-shared/commerce/customerPhotos.js";
 import { normalizeProduct } from "../server-shared/catalog/normalizeProduct.js";
 import { adminDb } from "./firebase-admin";
 import { AuthError } from "./auth-server";
@@ -35,5 +36,7 @@ export async function customerAction(
   if (action === "applyReferral") return loyalty.applyReferral(request);
   if (action === "submitReview")
     return createReviewSubmitter({ db })(data, { uid: token.uid });
+  if (action === "saveProfilePhoto")
+    return saveProfilePhoto(db, data, token.uid);
   throw new AuthError(404, "Unknown customer action.");
 }

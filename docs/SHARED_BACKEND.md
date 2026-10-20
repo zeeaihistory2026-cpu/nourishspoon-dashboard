@@ -41,3 +41,9 @@ The dashboard bell reads recent orders and maintains a monotonic read-through cu
 Sales supports the last seven days and the current calendar month to date in Asia/Karachi. Monthly comparison uses the same elapsed days of the previous month. Revenue counts paid, delivered orders; pending orders remain visible in order counts and Recent Orders. Metrics retain the documented 2,000-order reporting bound.
 
 The existing info@nourishspoon.com owner also retains its explicitly provisioned server-issued Firebase admin claim. This exception does not grant or elevate delegated users.
+
+## Customer review and profile photos
+
+Verified buyers can submit one review per delivered order/product. New reviews remain pending until the owner approves them; approved reviews refresh in the mobile Reviews tab through Firestore. The dashboard listens to review updated_at changes, supports a Pending approval filter, and preserves the original text and rating during moderation.
+
+A review may include one JPEG photo. The server decodes, resizes and recompresses it, strips metadata and limits the stored image to 80 KB. Photos live in a separate reviews/{reviewId}/media/photo document so normal review lists do not download image bytes. Media reads follow the parent review's ownership and approval state. The authenticated dashboard photo endpoint is private and uncached. Profile thumbnails use users/{uid}/media/profile, readable only by that account and writable only through the authenticated saveProfilePhoto action. Photo payloads have a separate bounded request limit. These small attachments use the existing database and do not require a new storage service.

@@ -9,7 +9,8 @@ const { GET, POST } = crudRoutes({
   orderDir: "asc",
   pageSize: 100,
   beforeCreate: (data) => {
-    if (!data.slug && typeof data.name === "string") data.slug = slugify(data.name);
+    if (!data.slug && typeof data.name === "string")
+      data.slug = slugify(data.name);
   },
 });
 

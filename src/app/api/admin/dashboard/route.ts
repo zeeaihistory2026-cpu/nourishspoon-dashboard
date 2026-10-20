@@ -1,339 +1,196 @@
-import { adminDb, toJSON } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
-import type { DashboardStats } from "@/lib/types";
+import { productView, iso } from "@/lib/contracts";
+import { recentOrders } from "@/lib/orders-data";
+import { rules } from "@/lib/rewards-server";
 
-interface OrderDoc {
-  orderNumber?: string;
-  userId?: string;
-  items?: { qty?: number }[];
-  total?: number;
-  subtotal?: number;
-  orderStatus?: string;
-  paymentStatus?: string;
-  createdAt?: { _seconds: number } | string;
-}
-
-function tsOf(v: unknown): number {
-  if (!v) return 0;
-  if (typeof v === "string") {
-    const t = new Date(v).getTime();
-    return Number.isNaN(t) ? 0 : t;
-  }
-  if (typeof v === "object" && v !== null && "_seconds" in v) {
-    return (v as { _seconds: number })._seconds * 1000;
-  }
-  return 0;
-}
-
-function pctDelta(current: number, previous: number): number {
-  if (previous <= 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 100);
-}
-
+const delta = (current: number, previous: number) =>
+  previous
+    ? Math.round(((current - previous) / previous) * 100)
+    : current
+      ? 100
+      : 0;
 export async function GET() {
   try {
     await requireAdmin();
     const db = adminDb();
-
-    const now = Date.now();
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const lastMonthStart = new Date(monthStart);
-    lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
-    const yesterdayStart = new Date(now - 24 * 60 * 60 * 1000);
-    yesterdayStart.setHours(0, 0, 0, 0);
-    const dayBeforeStart = new Date(yesterdayStart.getTime() - 24 * 60 * 60 * 1000);
-
-    // ---- Products ----
-    const productsSnap = await db.collection("products").limit(500).get();
-    const allProducts = productsSnap.docs
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((d) => ({ id: d.id, ...(d.data() as any) }))
-      .filter((p) => !p.deletedAt);
-    const products = allProducts.filter((p) => p.isActive !== false);
-    // "Total Products" must count every non-deleted product (11), not just
-    // the active ones (10) — otherwise the KPI disagrees with the Products tab.
-    const totalProducts = allProducts.length;
-    const newThisMonth = products.filter(
-      (p) => tsOf(p.createdAt) >= monthStart.getTime()
-    ).length;
-    const newLastMonth = products.filter((p) => {
-      const t = tsOf(p.createdAt);
-      return t >= lastMonthStart.getTime() && t < monthStart.getTime();
-    }).length;
-
-    // ---- Orders ----
-    const ordersSnap = await db
-      .collection("orders")
-      .orderBy("createdAt", "desc")
-      .limit(2000)
-      .get();
-    const orders = ordersSnap.docs.map((d) => {
-      const data = d.data() as OrderDoc;
-      return { id: d.id, t: tsOf(data.createdAt), ...data };
-    });
-    const valid = (o: (typeof orders)[number]) =>
-      o.orderStatus !== "cancelled" && o.paymentStatus !== "failed";
-
-    const totalOrders = orders.length;
-    const thisMonthOrders = orders.filter((o) => o.t >= monthStart.getTime());
-    const lastMonthOrders = orders.filter((o) => {
-      return o.t >= lastMonthStart.getTime() && o.t < monthStart.getTime();
-    });
-
-    const pendingOrders = orders.filter((o) => o.orderStatus === "placed").length;
-    const placedYesterday = orders.filter(
-      (o) => o.orderStatus === "placed" && o.t >= yesterdayStart.getTime()
-    ).length;
-    const placedDayBefore = orders.filter((o) => {
-      return (
-        o.orderStatus === "placed" &&
-        o.t >= dayBeforeStart.getTime() &&
-        o.t < yesterdayStart.getTime()
-      );
-    }).length;
-
-    const revenue = orders.filter(valid).reduce((s, o) => s + (o.total ?? 0), 0);
-    const revenueThisMonth = thisMonthOrders
-      .filter(valid)
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-    const revenueLastMonth = lastMonthOrders
-      .filter(valid)
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-
-    // ---- Offers ----
-    const couponsSnap = await db.collection("coupons").limit(200).get();
-    const coupons = couponsSnap.docs.map((d) => d.data() as { isActive?: boolean });
-    const activeOffers = coupons.filter((c) => c.isActive !== false).length;
-
-    const stats: DashboardStats = {
-      totalProducts,
-      productsDelta: pctDelta(newThisMonth, newLastMonth),
-      pendingOrders,
-      pendingDelta: pctDelta(placedYesterday, placedDayBefore),
-      totalOrders,
-      ordersDelta: pctDelta(thisMonthOrders.length, lastMonthOrders.length),
-      revenue: Math.round(revenue),
-      revenueDelta: pctDelta(revenueThisMonth, revenueLastMonth),
-      activeOffers,
-      offersDelta: 0,
-    };
-
-    // ---- Recent orders (enrich with customer name) ----
-    const recentRaw = orders.slice(0, 5);
-    const userIds = [...new Set(recentRaw.map((o) => o.userId).filter(Boolean))] as string[];
-    const userMap = new Map<string, string>();
-    await Promise.all(
-      userIds.map(async (uid) => {
-        const u = await db.collection("users").doc(uid).get();
-        if (u.exists) {
-          const d = u.data() as { fullName?: string; email?: string };
-          userMap.set(uid, d.fullName || d.email || "Customer");
-        }
-      })
+    const [catalog, loaded, offers] = await Promise.all([
+      db.collection("products").limit(1000).get(),
+      recentOrders(2000),
+      db.collection("promoCodes").limit(1000).get(),
+    ]);
+    const products = catalog.docs
+      .map((doc) => productView(doc.id, doc.data()))
+      .filter((item) => item.isActive);
+    const orders = loaded.map((row) => row.item);
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Karachi",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const number = (key: string) =>
+      Number(today.find((part) => part.type === key)!.value);
+    const start = (month: number, day = 1) =>
+      Date.UTC(number("year"), month, day) - 5 * 3600000;
+    const month = number("month") - 1;
+    const monthStart = start(month),
+      lastStart = start(month - 1),
+      dayStart = start(month, number("day"));
+    const time = (value: unknown) => Date.parse(iso(value) || "") || 0;
+    const thisMonth = orders.filter(
+      (order) => time(order.createdAt) >= monthStart,
     );
-    const recentOrders = recentRaw.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber ?? o.id.slice(0, 8).toUpperCase(),
-      customer: o.userId ? userMap.get(o.userId) ?? "Customer" : "Customer",
-      items: (o.items ?? []).reduce((s, i) => s + (i.qty ?? 1), 0),
-      amount: o.total ?? 0,
-      status: o.orderStatus ?? "placed",
-      date: o.t ? new Date(o.t).toISOString() : null,
-    }));
-
-    // ---- Tracking requests ----
-    const trackingSnap = await db
-      .collection("tracking")
-      .orderBy("updatedAt", "desc")
-      .limit(5)
-      .get()
-      .catch(() => null);
-    const trackRequests = (trackingSnap?.docs ?? []).map((d) => {
-      const t = toJSON(d.data()) as Record<string, unknown>;
-      return {
-        id: d.id,
-        trackingNumber: (t.trackingNumber as string) ?? d.id,
-        orderNumber: (t.orderNumber as string) ?? "",
-        customer: (t.customerName as string) ?? "",
-        status: (t.current as string) ?? "placed",
-        updatedAt: (t.updatedAt as string) ?? null,
-      };
-    });
-
-    // Plain (unbranded) food photos for the circular Control Center avatars —
-    // the branded thumbnails carry a name band that a circle crop would cut.
-    const PLAIN_PHOTOS: Record<string, string> = {
-      "classic-panjeeri-with-sugar": "sq-panjeeri-bowl-v2.jpg",
-      "classic-panjeeri-without-sugar": "sq-panjeeri-cook.jpg",
-      "homemade-panjeeri": "sq-panjeeri-jars.jpg",
-      "date-and-nuts-energy-balls": "sq-balls-hands.jpg",
-      "date-nut-balls": "sq-balls-plate.jpg",
-      "daily-nourishment-pack": "sq-combo-spread.jpg",
-      "energy-pack-combo": "sq-combo-ghee.jpg",
-      "family-combo": "sq-combo-ingredients.jpg",
-      "gym-freaks-combo": "sq-combo-hero.jpg",
-      "postpartum-care-combo": "sq-combo-dates.jpg",
-      "power-breakfast-combo": "sq-combo-cook2.jpg",
-    };
-    const ASSET_BASE = "https://nourishspoon-dashboard.vercel.app/assets/products";
-
-    // ---- Product control center (featured first, then latest) ----
-    const controlProducts = [...products]
-      .sort((a, b) => {
-        const fa = a.isFeatured ? 0 : 1;
-        const fb = b.isFeatured ? 0 : 1;
-        if (fa !== fb) return fa - fb;
-        const ta = tsOf(a.createdAt);
-        const tb = tsOf(b.createdAt);
-        if (tb !== ta) return tb - ta;
-        // Deterministic tiebreaker: products without createdAt tie at 0 —
-        // without this the order varied between loads.
-        return String(a.name ?? "").localeCompare(String(b.name ?? ""));
-      })
-      .slice(0, 4)
-      .map((p) => {
-        const branded = Array.isArray(p.images) && p.images[0] ? (p.images[0] as string) : ((p.image as string) ?? "");
-        const plain = PLAIN_PHOTOS[p.id as string];
+    const lastMonth = orders.filter(
+      (order) =>
+        time(order.createdAt) >= lastStart &&
+        time(order.createdAt) < monthStart,
+    );
+    const paid = (order: (typeof orders)[number]) =>
+      order.orderStatus === "delivered" && order.paymentStatus === "paid";
+    const revenue = (items: typeof orders) =>
+      items
+        .filter(paid)
+        .reduce((total, order) => total + (order.total || 0), 0);
+    const pending = orders.filter((order) => order.orderStatus === "pending");
+    const allOffers = offers.docs.map((doc) => doc.data());
+    if (!offers.docs.some((doc) => doc.id === "PROMO10"))
+      allOffers.push(rules.DEFAULT_PROMO);
+    const activeOffers = allOffers.filter(
+      (item) =>
+        item.active && (!item.expires_at || time(item.expires_at) > Date.now()),
+    ).length;
+    const dailySales = (from: number, days: number, weekly = false) =>
+      Array.from({ length: days }, (_, index) => {
+        const at = from + index * 86400000;
+        const items = orders.filter(
+          (order) =>
+            time(order.createdAt) >= at &&
+            time(order.createdAt) < at + 86400000,
+        );
         return {
-          id: p.id as string,
-          name: (p.name as string) ?? "",
-          weight: (p.weight as string) ?? "",
-          price: (p.price as number) ?? 0,
-          stock: (p.stock as number) ?? 0,
-          isActive: p.isActive !== false,
-          isFeatured: p.isFeatured === true,
-          image: branded,
-          thumb: plain ? `${ASSET_BASE}/${plain}` : branded,
+          date: new Date(at + 5 * 3600000).toISOString().slice(0, 10),
+          label: new Intl.DateTimeFormat("en", {
+            ...(weekly
+              ? { weekday: "short" as const }
+              : { day: "numeric" as const, month: "short" as const }),
+            timeZone: "Asia/Karachi",
+          }).format(at),
+          revenue: revenue(items),
+          orders: items.length,
         };
       });
-
-    // ---- Sales series (real order data only) ----
-    // Weekly: last 7 days. Monthly: last 12 months. Quarterly: last 8 quarters.
-    // Yearly: last 5 years. Each range also carries the previous-period total
-    // so the card can show an honest week/month/quarter/year-over-year delta.
-    const dayLabels: string[] = [];
-    const weeklySales: { date: string; label: string; revenue: number; orders: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now - i * 24 * 60 * 60 * 1000);
-      d.setHours(0, 0, 0, 0);
-      const next = new Date(d.getTime() + 24 * 60 * 60 * 1000);
-      const dayOrders = orders.filter((o) => o.t >= d.getTime() && o.t < next.getTime() && valid(o));
-      const label = d.toLocaleDateString("en-US", { weekday: "short" });
-      dayLabels.push(label);
-      weeklySales.push({
-        date: d.toISOString().slice(0, 10),
-        label,
-        revenue: Math.round(dayOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
-        orders: dayOrders.length,
-      });
-    }
-    const prevWeekTotal = orders
-      .filter((o) => o.t >= now - 14 * 24 * 60 * 60 * 1000 && o.t < now - 7 * 24 * 60 * 60 * 1000 && valid(o))
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-
-    const monthPoints: { label: string; revenue: number; orders: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(1);
-      d.setHours(0, 0, 0, 0);
-      d.setMonth(d.getMonth() - i);
-      const next = new Date(d);
-      next.setMonth(next.getMonth() + 1);
-      const mOrders = orders.filter((o) => o.t >= d.getTime() && o.t < next.getTime() && valid(o));
-      monthPoints.push({
-        label: `${d.toLocaleDateString("en-US", { month: "short" })} ${String(d.getFullYear()).slice(2)}`,
-        revenue: Math.round(mOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
-        orders: mOrders.length,
-      });
-    }
-    const prev12MonthsTotal = orders
-      .filter((o) => {
-        const d = new Date(now);
-        d.setDate(1);
-        d.setHours(0, 0, 0, 0);
-        d.setMonth(d.getMonth() - 24);
-        const end = new Date(now);
-        end.setDate(1);
-        end.setHours(0, 0, 0, 0);
-        end.setMonth(end.getMonth() - 12);
-        return o.t >= d.getTime() && o.t < end.getTime() && valid(o);
-      })
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-
-    const quarterPoints: { label: string; revenue: number; orders: number }[] = [];
-    for (let i = 7; i >= 0; i--) {
-      const d = new Date(now);
-      const q = Math.floor(d.getMonth() / 3) - i;
-      const year = d.getFullYear() + Math.floor(q / 4);
-      const qIdx = ((q % 4) + 4) % 4;
-      const start = new Date(year, qIdx * 3, 1);
-      const end = new Date(year, qIdx * 3 + 3, 1);
-      const qOrders = orders.filter((o) => o.t >= start.getTime() && o.t < end.getTime() && valid(o));
-      quarterPoints.push({
-        label: `Q${qIdx + 1} ${String(year).slice(2)}`,
-        revenue: Math.round(qOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
-        orders: qOrders.length,
-      });
-    }
-    const prev8QuartersTotal = orders
-      .filter((o) => {
-        const d = new Date(now);
-        const q = Math.floor(d.getMonth() / 3) - 16;
-        const year = d.getFullYear() + Math.floor(q / 4);
-        const qIdx = ((q % 4) + 4) % 4;
-        const start = new Date(year, qIdx * 3, 1);
-        const end = new Date(now);
-        const qEnd = Math.floor(end.getMonth() / 3) - 8;
-        const qEndYear = end.getFullYear() + Math.floor(qEnd / 4);
-        const qEndIdx = ((qEnd % 4) + 4) % 4;
-        const endBound = new Date(qEndYear, qEndIdx * 3, 1);
-        return o.t >= start.getTime() && o.t < endBound.getTime() && valid(o);
-      })
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-
-    const yearPoints: { label: string; revenue: number; orders: number }[] = [];
-    for (let i = 4; i >= 0; i--) {
-      const year = new Date(now).getFullYear() - i;
-      const start = new Date(year, 0, 1);
-      const end = new Date(year + 1, 0, 1);
-      const yOrders = orders.filter((o) => o.t >= start.getTime() && o.t < end.getTime() && valid(o));
-      yearPoints.push({
-        label: String(year),
-        revenue: Math.round(yOrders.reduce((s, o) => s + (o.total ?? 0), 0)),
-        orders: yOrders.length,
-      });
-    }
-    const prev5YearsTotal = orders
-      .filter((o) => {
-        const year = new Date(now).getFullYear() - 10;
-        const start = new Date(year, 0, 1);
-        const end = new Date(new Date(now).getFullYear() - 5, 0, 1);
-        return o.t >= start.getTime() && o.t < end.getTime() && valid(o);
-      })
-      .reduce((s, o) => s + (o.total ?? 0), 0);
-
-    const sum = (pts: { revenue: number; orders: number }[]) => ({
-      total: pts.reduce((s, p) => s + p.revenue, 0),
-      orders: pts.reduce((s, p) => s + p.orders, 0),
-    });
-    const sales = {
-      weekly: { ...sum(weeklySales), delta: pctDelta(sum(weeklySales).total, prevWeekTotal), prevLabel: "vs previous week", rangeLabel: "last 7 days", points: weeklySales },
-      monthly: { ...sum(monthPoints), delta: pctDelta(sum(monthPoints).total, prev12MonthsTotal), prevLabel: "vs previous 12 months", rangeLabel: "last 12 months", points: monthPoints },
-      quarterly: { ...sum(quarterPoints), delta: pctDelta(sum(quarterPoints).total, prev8QuartersTotal), prevLabel: "vs previous 8 quarters", rangeLabel: "last 8 quarters", points: quarterPoints },
-      yearly: { ...sum(yearPoints), delta: pctDelta(sum(yearPoints).total, prev5YearsTotal), prevLabel: "vs previous 5 years", rangeLabel: "last 5 years", points: yearPoints },
-    };
-
+    const weeklySales = dailySales(dayStart - 6 * 86400000, 7, true);
+    const monthlySales = dailySales(monthStart, number("day"));
+    const previousMonthEnd = Math.min(
+      monthStart,
+      lastStart + number("day") * 86400000,
+    );
     return Response.json({
-      stats,
-      recentOrders,
-      trackRequests,
-      controlProducts,
+      stats: {
+        totalProducts: products.length,
+        productsDelta: delta(
+          products.filter((item) => time(item.createdAt) >= monthStart).length,
+          products.filter(
+            (item) =>
+              time(item.createdAt) >= lastStart &&
+              time(item.createdAt) < monthStart,
+          ).length,
+        ),
+        pendingOrders: pending.length,
+        pendingDelta: delta(
+          pending.filter((item) => time(item.createdAt) >= dayStart - 86400000)
+            .length,
+          pending.filter(
+            (item) =>
+              time(item.createdAt) >= dayStart - 172800000 &&
+              time(item.createdAt) < dayStart - 86400000,
+          ).length,
+        ),
+        totalOrders: orders.length,
+        ordersDelta: delta(thisMonth.length, lastMonth.length),
+        revenue: revenue(orders),
+        revenueDelta: delta(revenue(thisMonth), revenue(lastMonth)),
+        activeOffers,
+        offersDelta: 0,
+      },
+      recentOrders: orders.slice(0, 5).map((order) => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customer: order.customerName,
+        items: order.items.reduce((sum, item) => sum + item.qty, 0),
+        amount: order.total,
+        status: order.orderStatus,
+        date: order.createdAt,
+      })),
       weeklySales,
-      sales,
+      sales: {
+        weekly: {
+          total: weeklySales.reduce((sum, day) => sum + day.revenue, 0),
+          orders: weeklySales.reduce((sum, day) => sum + day.orders, 0),
+          delta: delta(
+            weeklySales.reduce((sum, day) => sum + day.revenue, 0),
+            revenue(
+              orders.filter(
+                (order) =>
+                  time(order.createdAt) >= dayStart - 13 * 86400000 &&
+                  time(order.createdAt) < dayStart - 6 * 86400000,
+              ),
+            ),
+          ),
+          prevLabel: "vs previous week",
+          rangeLabel: "last 7 days",
+          points: weeklySales,
+        },
+        monthly: {
+          total: monthlySales.reduce((sum, day) => sum + day.revenue, 0),
+          orders: monthlySales.reduce((sum, day) => sum + day.orders, 0),
+          delta: delta(
+            monthlySales.reduce((sum, day) => sum + day.revenue, 0),
+            revenue(
+              orders.filter(
+                (order) =>
+                  time(order.createdAt) >= lastStart &&
+                  time(order.createdAt) < previousMonthEnd,
+              ),
+            ),
+          ),
+          prevLabel: "vs previous month to date",
+          rangeLabel: "month to date",
+          points: monthlySales,
+        },
+      },
+      trackRequests: orders
+        .filter((order) => order.trackingNumber)
+        .slice(0, 5)
+        .map((order) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          trackingNumber: order.trackingNumber,
+          customer: order.customerName,
+          status: order.orderStatus,
+          updatedAt: order.updatedAt,
+        })),
+      controlProducts: products
+        .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
+        .slice(0, 4)
+        .map((product) => ({
+          ...product,
+          image: product.images[0] || "",
+          category:
+            (product as { category?: string }).category ||
+            product.name.split(" ")[0] ||
+            "Classic",
+          thumb:
+            product.images[0] || "/assets/products/sq-panjeeri-bowl-v2.jpg",
+        })),
+      scope: {
+        ordersLimit: 2000,
+        productsLimit: 1000,
+        truncated: loaded.length === 2000 || catalog.size === 1000,
+      },
     });
-  } catch (err) {
-    return authErrorResponse(err);
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }

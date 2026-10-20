@@ -35,9 +35,8 @@ export type NutritionFact = {
 };
 
 export type Product = {
-  /** Legacy inventory shared across every size of this product. */
-  legacy_stock?: number | null;
   inventory_mode?: 'per_variant';
+  legacy_stock?: number | null;
   id: string;
   name: string;
   slug: string;
@@ -89,6 +88,47 @@ export type DeliveryMethod = {
   icon?: string;
   active: boolean;
   sort_order: number;
+};
+
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+
+export type OrderItem = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id: string;
+  product_name: string;
+  variant_weight: string;
+  unit_price: number;
+  quantity: number;
+  total_price: number;
+  product_image?: string;
+};
+
+export type Order = {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  delivery_city: string;
+  delivery_address: string;
+  is_gift: boolean;
+  gift_message?: string;
+  payment_method_id?: string;
+  payment_method_code: string;
+  delivery_method_id?: string;
+  delivery_method_code: string;
+  status: OrderStatus;
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
+  total: number;
+  notes?: string;
+  whatsapp_generated_message?: string;
+  created_at: string;
+  updated_at?: string;
+  items?: OrderItem[];
 };
 
 export type Review = {
@@ -144,4 +184,16 @@ export type FounderStory = {
   story_body: string;
   process: Array<{ step: number; title: string; desc: string }>;
   values: Array<{ title: string; desc: string }>;
+};
+
+export type ThemeColors = {
+  primary: string;
+  primaryDark: string;
+  background: string;
+  surface: string;
+  card: string;
+  gold: string;
+  text: string;
+  mutedText: string;
+  border: string;
 };

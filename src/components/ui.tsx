@@ -41,7 +41,11 @@ export function PageHeader({
       <Box>
         <Typography
           variant="h4"
-          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 30 }}
+          sx={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: 30,
+          }}
         >
           {title}
         </Typography>
@@ -85,14 +89,21 @@ const STATUS_STYLES: Record<string, { bg: string; fg: string; dot: string }> = {
   inactive: { bg: "#efe9d8", fg: "#8d8670", dot: "#b3a983" },
 };
 
-export function StatusChip({ status, label }: { status: string; label?: string }) {
+export function StatusChip({
+  status,
+  label,
+}: {
+  status: string;
+  label?: string;
+}) {
   const key = status.toLowerCase().replace(/[\s-]+/g, "_");
-  const s = STATUS_STYLES[key] ?? { bg: "#efe9d8", fg: "#57523f", dot: "#b3a983" };
+  const s = STATUS_STYLES[key] ?? {
+    bg: "#efe9d8",
+    fg: "#57523f",
+    dot: "#b3a983",
+  };
   const text =
-    label ??
-    status
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    label ?? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return (
     <Chip
       size="small"
@@ -157,7 +168,11 @@ export function DataTable<T extends { id: string }>({
           <TableHead>
             <TableRow>
               {columns.map((c) => (
-                <TableCell key={c.key} width={c.width} align={c.align ?? "left"}>
+                <TableCell
+                  key={c.key}
+                  width={c.width}
+                  align={c.align ?? "left"}
+                >
                   {c.header}
                 </TableCell>
               ))}
@@ -180,7 +195,11 @@ export function DataTable<T extends { id: string }>({
             ))}
             {!rows.length && (
               <TableRow>
-                <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
+                <TableCell
+                  colSpan={columns.length}
+                  align="center"
+                  sx={{ py: 6 }}
+                >
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
                     {emptyText}
                   </Typography>
@@ -260,7 +279,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ fontFamily: '"Playfair Display", Georgia, serif' }}>
+      <DialogTitle sx={{ fontFamily: "var(--font-display)" }}>
         {title}
       </DialogTitle>
       <DialogContent>
@@ -277,7 +296,9 @@ export function ConfirmDialog({
           variant="contained"
           disabled={busy}
           color={danger ? "error" : "primary"}
-          startIcon={busy ? <CircularProgress size={16} color="inherit" /> : undefined}
+          startIcon={
+            busy ? <CircularProgress size={16} color="inherit" /> : undefined
+          }
         >
           {confirmLabel}
         </Button>
@@ -307,25 +328,49 @@ export function FormDrawer({
 }) {
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: { xs: "100vw", sm: wide ? 640 : 480 }, maxWidth: "100vw", height: "100%", display: "flex", flexDirection: "column" }}>
-        <Box className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b" sx={{ borderColor: "#ece4cb" }}>
+      <Box
+        sx={{
+          width: { xs: "100vw", sm: wide ? 640 : 480 },
+          maxWidth: "100vw",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Box
+          className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b"
+          sx={{ borderColor: "#ece4cb" }}
+        >
           <Box>
-            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
+            <Typography
+              variant="h5"
+              sx={{ fontFamily: "var(--font-display)", fontWeight: 700 }}
+            >
               {title}
             </Typography>
             {subtitle && (
-              <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mt: 0.5 }}
+              >
                 {subtitle}
               </Typography>
             )}
           </Box>
-          <IconButton onClick={onClose} aria-label="Close" sx={{ border: "1px solid #e7ddc2" }}>
+          <IconButton
+            onClick={onClose}
+            aria-label="Close"
+            sx={{ border: "1px solid #e7ddc2" }}
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
         <Box className="flex-1 overflow-y-auto px-6 py-5">{children}</Box>
         {footer && (
-          <Box className="px-6 py-4 border-t flex items-center justify-end gap-2" sx={{ borderColor: "#ece4cb", background: "#fbf7ea" }}>
+          <Box
+            className="px-6 py-4 border-t flex items-center justify-end gap-2"
+            sx={{ borderColor: "#ece4cb", background: "#fbf7ea" }}
+          >
             {footer}
           </Box>
         )}
@@ -336,7 +381,13 @@ export function FormDrawer({
 
 /* ---------------------------------- Misc ---------------------------------- */
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
   return (
     <Card>
       <CardContent sx={{ textAlign: "center", py: 6 }}>
@@ -359,14 +410,38 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <Typography variant="caption" sx={{ color: "#c0392b", mt: 0.5, display: "block" }}>
+    <Typography
+      variant="caption"
+      sx={{ color: "#c0392b", mt: 0.5, display: "block" }}
+    >
       {message}
     </Typography>
   );
 }
 
-export function Thumb({ src, alt, size = 44, circle = false }: { src?: string; alt: string; size?: number; circle?: boolean }) {
-  if (!src) {
+export function Thumb({
+  src,
+  alt,
+  size = 44,
+  circle = false,
+}: {
+  src?: string;
+  alt: string;
+  size?: number;
+  circle?: boolean;
+}) {
+  const [failed, setFailed] = React.useState<string | undefined>();
+  const bundled: Record<string, string> = {
+    "bundle:panjeeri": "/assets/products/product-panjeeri.jpg",
+    "bundle:energy-balls": "/assets/products/product-energy-balls.jpg",
+    "bundle:combo": "/assets/products/product-combo.png",
+    "/assets/products/panjeeri_detail_hero.jpg":
+      "/assets/products/product-panjeeri.jpg",
+    "/assets/products/energy_balls_detail_hero.jpg":
+      "/assets/products/product-energy-balls.jpg",
+  };
+  const image = src ? bundled[src] || src : undefined;
+  if (!image || failed === image) {
     return (
       <Box
         sx={{
@@ -390,16 +465,17 @@ export function Thumb({ src, alt, size = 44, circle = false }: { src?: string; a
   return (
     <Box
       component="img"
-      src={src}
+      src={image}
+      onError={() => setFailed(image)}
       alt={alt}
       sx={{
         width: size,
         height: size,
         borderRadius: circle ? "50%" : 2,
-        objectFit: circle ? "cover" : "contain",
+        objectFit: "cover",
         flexShrink: 0,
         border: "1px solid #ece4cb",
-        background: "#f8f4e8",
+        background: "#fff",
       }}
     />
   );

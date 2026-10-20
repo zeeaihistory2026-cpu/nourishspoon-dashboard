@@ -18,37 +18,49 @@ function docId(email: string) {
   return email.trim().toLowerCase();
 }
 
-export async function getAccessRecord(email: string): Promise<AccessUser | null> {
+export async function getAccessRecord(
+  email: string,
+): Promise<AccessUser | null> {
   if (!email) return null;
   const snap = await adminDb().collection(COLLECTION).doc(docId(email)).get();
   if (!snap.exists) return null;
-  const data = toJSON(snap.data() as Record<string, unknown>) as Partial<AccessUser>;
+  const data = toJSON(
+    snap.data() as Record<string, unknown>,
+  ) as Partial<AccessUser>;
+  if (data.role !== "admin" && data.role !== "child") return null;
   return {
     email: (data.email as string) ?? email.toLowerCase(),
     name: (data.name as string) ?? "",
-    role: data.role === "child" ? "child" : "admin",
+    role: data.role,
     createdAt: data.createdAt as string | undefined,
     createdBy: data.createdBy as string | undefined,
   };
 }
 
 export async function listAccessUsers(): Promise<AccessUser[]> {
-  const snap = await adminDb().collection(COLLECTION).orderBy("createdAt", "asc").get();
-  return snap.docs.map((d) => {
-    const data = toJSON(d.data() as Record<string, unknown>) as Partial<AccessUser>;
-    return {
-      email: (data.email as string) ?? d.id,
-      name: (data.name as string) ?? "",
-      role: data.role === "child" ? "child" : "admin",
-      createdAt: data.createdAt as string | undefined,
-      createdBy: data.createdBy as string | undefined,
-    };
-  });
+  const snap = await adminDb()
+    .collection(COLLECTION)
+    .orderBy("createdAt", "asc")
+    .get();
+  return snap.docs
+    .filter((d) => ["admin", "child"].includes(d.data().role))
+    .map((d) => {
+      const data = toJSON(
+        d.data() as Record<string, unknown>,
+      ) as Partial<AccessUser>;
+      return {
+        email: (data.email as string) ?? d.id,
+        name: (data.name as string) ?? "",
+        role: data.role === "child" ? "child" : "admin",
+        createdAt: data.createdAt as string | undefined,
+        createdBy: data.createdBy as string | undefined,
+      };
+    });
 }
 
 export async function upsertAccessUser(
   input: { email: string; name: string; role: AccessRole },
-  createdBy: string
+  createdBy: string,
 ): Promise<AccessUser> {
   const email = input.email.trim().toLowerCase();
   const user: AccessUser = {
@@ -58,7 +70,15 @@ export async function upsertAccessUser(
     createdAt: new Date().toISOString(),
     createdBy,
   };
-  await adminDb().collection(COLLECTION).doc(docId(email)).set(user, { merge: true });
+  const ref = adminDb().collection(COLLECTION).doc(docId(email));
+  await adminDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) {
+      user.createdAt = existing.data()?.createdAt || user.createdAt;
+      user.createdBy = existing.data()?.createdBy || createdBy;
+    }
+    tx.set(ref, user);
+  });
   return user;
 }
 

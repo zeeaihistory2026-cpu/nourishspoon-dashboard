@@ -1,30 +1,33 @@
-import { z } from "zod";
-import { adminDb, docToJSON, FieldValue } from "@/lib/firebase-admin";
-import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
-import { reviewModerateSchema } from "@/lib/schemas";
+import {
+  assertSameOrigin,
+  authErrorResponse,
+  requireAdmin,
+} from "@/lib/auth-server";
+import { adminDb } from "@/lib/firebase-admin";
 
-/** Moderate visibility only — the customer's original text is never altered. */
-export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+import { reviewView } from "@/lib/contracts";
+import { reviewModerateSchema } from "@/lib/schemas";
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
   try {
+    assertSameOrigin(request);
     const admin = await requireAdmin();
-    const { id } = await ctx.params;
-    const parsed = reviewModerateSchema.parse(await req.json());
-    const ref = adminDb().collection("reviews").doc(id);
-    const snap = await ref.get();
-    if (!snap.exists) return Response.json({ error: "Not found." }, { status: 404 });
-    await ref.update({
-      visibility: parsed.visibility,
-      moderatedBy: admin.uid,
-      moderatedByEmail: (admin.email as string) ?? "",
-      moderatedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+    const { id } = await context.params;
+    const input = reviewModerateSchema.parse(await request.json());
+    const reference = adminDb().collection("reviews").doc(id);
+    await reference.update({
+      status: ["visible", "featured"].includes(input.visibility)
+        ? "approved"
+        : "hidden",
+      is_featured: input.visibility === "featured",
+      moderated_by: admin.uid,
+      moderated_at: new Date().toISOString(),
     });
-    const updated = await ref.get();
-    return Response.json({ item: docToJSON(updated) });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return Response.json({ error: err.issues[0]?.message ?? "Invalid data." }, { status: 400 });
-    }
-    return authErrorResponse(err);
+    const snapshot = await reference.get();
+    return Response.json({ item: reviewView(id, snapshot.data()!) });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AppBar,
+  Alert,
   Avatar,
-  Badge,
   Box,
   Button,
   Divider,
@@ -47,7 +47,10 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import PhoneIphoneOutlined from "@mui/icons-material/PhoneIphoneOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMoreOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
+import { OrderNotifications } from "./OrderNotifications";
 import { api } from "@/lib/api";
+import { signOut as signOutFirebase } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 
 export interface AdminUser {
   name: string;
@@ -55,24 +58,51 @@ export interface AdminUser {
   role?: "admin" | "child";
 }
 
-const NAV: { href: string; label: string; icon: React.ReactNode; adminOnly?: boolean; badge?: string }[] = [
+const NAV: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  adminOnly?: boolean;
+  badge?: string;
+}[] = [
   { href: "/", label: "Dashboard", icon: <HomeOutlined /> },
   { href: "/home-content", label: "Home Content", icon: <ImageOutlined /> },
   { href: "/onboarding", label: "Onboarding", icon: <SpaOutlined /> },
   { href: "/products", label: "Products", icon: <Inventory2Outlined /> },
   { href: "/orders", label: "Orders", icon: <ShoppingCartOutlined /> },
   { href: "/track-orders", label: "Track Order", icon: <LocationOnOutlined /> },
-  { href: "/offers-points", label: "Offers & Points", icon: <LocalOfferOutlined /> },
+  {
+    href: "/offers-points",
+    label: "Offers & Points",
+    icon: <LocalOfferOutlined />,
+  },
   { href: "/refer-earn", label: "Refer & Earn", icon: <PeopleOutline /> },
-  { href: "/notifications", label: "Notifications", icon: <NotificationsNoneOutlined />, badge: "3" },
-  { href: "/payment-methods", label: "Payment Methods", icon: <CreditCardOutlined /> },
-  { href: "/delivery-information", label: "Delivery Information", icon: <LocalShippingOutlined /> },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    icon: <NotificationsNoneOutlined />,
+  },
+  {
+    href: "/payment-methods",
+    label: "Payment Methods",
+    icon: <CreditCardOutlined />,
+  },
+  {
+    href: "/delivery-information",
+    label: "Delivery Information",
+    icon: <LocalShippingOutlined />,
+  },
   { href: "/faq", label: "FAQ / Help & Support", icon: <HelpOutline /> },
   { href: "/our-story", label: "Our Story", icon: <NatureOutlined /> },
   { href: "/reviews", label: "Reviews", icon: <StarBorderOutlined /> },
   { href: "/wishlist", label: "Wishlist", icon: <FavoriteBorderOutlined /> },
   { href: "/customers", label: "Profile & Auth", icon: <PersonOutline /> },
-  { href: "/user-access", label: "User Access", icon: <PeopleOutline />, adminOnly: true },
+  {
+    href: "/user-access",
+    label: "User Access",
+    icon: <PeopleOutline />,
+    adminOnly: true,
+  },
 ];
 
 const SIDEBAR_W = 232;
@@ -81,9 +111,19 @@ const SIDEBAR_COLLAPSED_W = 72;
 export function LeafSprig() {
   return (
     <svg width="72" height="96" viewBox="0 0 72 96" fill="none" aria-hidden>
-      <path d="M36 92 C 34 60, 38 34, 44 8" stroke="#7d9b6a" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M36 92 C 34 60, 38 34, 44 8"
+        stroke="#7d9b6a"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       {[
-        [38, 74, -38], [40, 62, 34], [41, 50, -36], [42, 38, 32], [43, 26, -30], [44, 16, 26],
+        [38, 74, -38],
+        [40, 62, 34],
+        [41, 50, -36],
+        [42, 38, 32],
+        [43, 26, -30],
+        [44, 16, 26],
       ].map(([x, y, r], i) => (
         <ellipse
           key={i}
@@ -100,12 +140,25 @@ export function LeafSprig() {
   );
 }
 
-function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () => void; collapsed?: boolean; role?: "admin" | "child" }) {
+function SidebarBody({
+  onNavigate,
+  collapsed = false,
+  role,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  role?: "admin" | "child";
+}) {
   const pathname = usePathname();
   const items = NAV.filter((item) => !item.adminOnly || role === "admin");
   return (
-    <Box className="h-full flex flex-col" sx={{ background: "#f6f1e1", overflow: "hidden" }}>
-      <Box sx={{ px: collapsed ? 1 : 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}>
+    <Box
+      className="h-full flex flex-col"
+      sx={{ background: "#f6f1e1", overflow: "hidden" }}
+    >
+      <Box
+        sx={{ px: collapsed ? 1 : 2.5, pt: 2.5, pb: 1.5, textAlign: "center" }}
+      >
         <Box
           component="img"
           src="/assets/brand/logo-transparent.png"
@@ -115,7 +168,7 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
         {!collapsed && (
           <Typography
             sx={{
-              fontFamily: '"Pinyon Script", cursive',
+              fontFamily: "var(--font-script), cursive",
               color: "#b08a2e",
               fontSize: 17,
               mt: 0.5,
@@ -127,11 +180,16 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
         )}
       </Box>
 
-      <Box className="flex-1 overflow-y-auto" sx={{ px: collapsed ? 1 : 1.5, pb: 2 }}>
+      <Box
+        className="flex-1 overflow-y-auto"
+        sx={{ px: collapsed ? 1 : 1.5, pb: 2 }}
+      >
         <List disablePadding>
           {items.map((item) => {
             const active =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
             return (
               <ListItemButton
                 key={item.href}
@@ -164,7 +222,11 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
                 {!collapsed && (
                   <ListItemText
                     primary={item.label}
-                    slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active ? 700 : 600 } } }}
+                    slotProps={{
+                      primary: {
+                        sx: { fontSize: 13.5, fontWeight: active ? 700 : 600 },
+                      },
+                    }}
                   />
                 )}
                 {!collapsed && item.badge && (
@@ -195,10 +257,17 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
 
       {!collapsed && (
         <Box sx={{ px: 2, pb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 1,
+            }}
+          >
             <Typography
               sx={{
-                fontFamily: '"Pinyon Script", cursive',
+                fontFamily: "var(--font-script), cursive",
                 color: "#b08a2e",
                 fontSize: 21,
                 lineHeight: 1.25,
@@ -223,12 +292,27 @@ function SidebarBody({ onNavigate, collapsed = false, role }: { onNavigate?: () 
               border: "1px solid #e7ddc2",
             }}
           >
-            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 14, color: "#1b3a28", lineHeight: 1.35 }}>
+            <Typography
+              sx={{
+                fontFamily: "var(--font-display), Georgia, serif",
+                fontWeight: 700,
+                fontSize: 14,
+                color: "#1b3a28",
+                lineHeight: 1.35,
+              }}
+            >
               Good Food Builds
               <br />
               Brighter Days
             </Typography>
-            <Typography sx={{ fontSize: 11.5, color: "#8d8670", mt: 0.6, lineHeight: 1.45 }}>
+            <Typography
+              sx={{
+                fontSize: 11.5,
+                color: "#8d8670",
+                mt: 0.6,
+                lineHeight: 1.45,
+              }}
+            >
               Keep nourishing lives together.
             </Typography>
           </Box>
@@ -252,6 +336,7 @@ export default function Shell({
   const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const [signOutError, setSignOutError] = useState("");
 
   const initials = admin.name
     .split(" ")
@@ -264,11 +349,16 @@ export default function Shell({
     setAnchorEl(null);
     try {
       await api("/api/auth/logout", { method: "POST" });
-    } catch {
-      /* ignore */
+      await signOutFirebase(getFirebaseAuth());
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      setSignOutError(
+        error instanceof Error
+          ? error.message
+          : "Could not sign out. Please retry.",
+      );
     }
-    router.push("/login");
-    router.refresh();
   }
 
   function submitSearch(e: React.FormEvent) {
@@ -302,7 +392,10 @@ export default function Shell({
           ModalProps={{ keepMounted: true }}
           sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_W } }}
         >
-          <SidebarBody onNavigate={() => setMobileOpen(false)} role={admin.role} />
+          <SidebarBody
+            onNavigate={() => setMobileOpen(false)}
+            role={admin.role}
+          />
         </Drawer>
       )}
 
@@ -318,18 +411,30 @@ export default function Shell({
             color: "#2c2a21",
           }}
         >
-          <Toolbar sx={{ gap: { xs: 1, sm: 2 }, py: 1, px: { xs: 1.5, md: 3 } }}>
+          <Toolbar
+            sx={{ gap: { xs: 1, sm: 2 }, py: 1, px: { xs: 1.5, md: 3 } }}
+          >
             <IconButton
               onClick={() => {
                 if (isDesktop) setCollapsed((c) => !c);
                 else setMobileOpen(true);
               }}
-              aria-label={isDesktop ? (collapsed ? "Expand sidebar" : "Collapse sidebar") : "Open menu"}
+              aria-label={
+                isDesktop
+                  ? collapsed
+                    ? "Expand sidebar"
+                    : "Collapse sidebar"
+                  : "Open menu"
+              }
               sx={{ border: "1px solid #e7ddc2", backgroundColor: "#fffdf7" }}
             >
               {isDesktop && !collapsed ? <MenuOpenIcon /> : <MenuIcon />}
             </IconButton>
-            <Box component="form" onSubmit={submitSearch} sx={{ flex: 1, maxWidth: 560 }}>
+            <Box
+              component="form"
+              onSubmit={submitSearch}
+              sx={{ flex: 1, maxWidth: 560 }}
+            >
               <TextField
                 fullWidth
                 size="small"
@@ -337,34 +442,34 @@ export default function Shell({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 slotProps={{
-              input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: "#8d8670", fontSize: 20 }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Box
-                        sx={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: "#8d8670",
-                          background: "#f4e9c8",
-                          border: "1px solid #e7ddc2",
-                          borderRadius: 1,
-                          px: 0.7,
-                          py: 0.2,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        ⌘ K
-                      </Box>
-                    </InputAdornment>
-                  ),
-                  sx: { borderRadius: 3, backgroundColor: "#fffdf7" },
-              },
-            }}
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: "#8d8670", fontSize: 20 }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Box
+                          sx={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#8d8670",
+                            background: "#f4e9c8",
+                            border: "1px solid #e7ddc2",
+                            borderRadius: 1,
+                            px: 0.7,
+                            py: 0.2,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          ⌘ K
+                        </Box>
+                      </InputAdornment>
+                    ),
+                    sx: { borderRadius: 3, backgroundColor: "#fffdf7" },
+                  },
+                }}
               />
             </Box>
             <Button
@@ -379,37 +484,60 @@ export default function Shell({
             >
               Preview App
             </Button>
-            <IconButton
-              aria-label="Notifications"
-              onClick={() => router.push("/notifications")}
-              sx={{ border: "1px solid #e7ddc2", backgroundColor: "#fffdf7" }}
-            >
-              <Badge variant="dot" color="error" overlap="circular">
-                <NotificationsNoneOutlined sx={{ fontSize: 20 }} />
-              </Badge>
-            </IconButton>
+            <OrderNotifications />
             <Button
               onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{ textTransform: "none", color: "inherit", gap: 1.2, px: 1 }}
             >
-              <Avatar sx={{ bgcolor: "#1b3a28", width: 36, height: 36, fontSize: 14, fontWeight: 800 }}>
+              <Avatar
+                sx={{
+                  bgcolor: "#1b3a28",
+                  width: 36,
+                  height: 36,
+                  fontSize: 14,
+                  fontWeight: 800,
+                }}
+              >
                 {initials || "A"}
               </Avatar>
-              <Box sx={{ textAlign: "left", display: { xs: "none", md: "block" }, lineHeight: 1.2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13 }}>
+              <Box
+                sx={{
+                  textAlign: "left",
+                  display: { xs: "none", md: "block" },
+                  lineHeight: 1.2,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 800, fontSize: 13 }}
+                >
                   {admin.name}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.secondary", fontSize: 11 }}
+                >
                   {admin.role === "child" ? "Child Access" : "Admin"}
                 </Typography>
               </Box>
               <ExpandMoreIcon sx={{ fontSize: 18, color: "#8d8670" }} />
             </Button>
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+            >
               <MenuItem disabled>
                 <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{admin.name}</Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>{admin.email}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {admin.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {admin.email}
+                  </Typography>
                 </Box>
               </MenuItem>
               <Divider />
@@ -423,9 +551,26 @@ export default function Shell({
         {/* Page content */}
         <Box
           component="main"
-          sx={{ flex: 1, minWidth: 0, px: { xs: 2, md: 3.5 }, py: 3, maxWidth: 1720, width: "100%", mx: "auto" }}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            px: { xs: 2, md: 3.5 },
+            py: 3,
+            maxWidth: 1720,
+            width: "100%",
+            mx: "auto",
+          }}
           key={pathname}
         >
+          {!!signOutError && (
+            <Alert
+              severity="error"
+              onClose={() => setSignOutError("")}
+              sx={{ mb: 2 }}
+            >
+              {signOutError}
+            </Alert>
+          )}
           {children}
         </Box>
       </Box>

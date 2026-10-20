@@ -1,55 +1,51 @@
-import { requireAdminRole, authErrorResponse } from "@/lib/auth-server";
+import { z } from "zod";
+import {
+  assertSameOrigin,
+  requireAdminRole,
+  authErrorResponse,
+} from "@/lib/auth-server";
 import {
   listAccessUsers,
   upsertAccessUser,
   removeAccessUser,
-  type AccessRole,
 } from "@/lib/access";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** GET: list all users with dashboard access (admin only). */
+const emailSchema = z.string().trim().toLowerCase().email().max(254);
 export async function GET() {
   try {
     await requireAdminRole();
-    const users = await listAccessUsers();
-    return Response.json({ users });
-  } catch (err) {
-    return authErrorResponse(err);
+    return Response.json({ users: await listAccessUsers() });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }
-
-/** POST: give access — { name, email, role: "admin" | "child" } (admin only). */
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const session = await requireAdminRole();
-    const body = await req.json().catch(() => ({}));
-    const name = String(body.name ?? "").trim();
-    const email = String(body.email ?? "").trim().toLowerCase();
-    const role: AccessRole = body.role === "child" ? "child" : "admin";
-    if (!name) return Response.json({ error: "Name is required." }, { status: 400 });
-    if (!EMAIL_RE.test(email)) return Response.json({ error: "Enter a valid email address." }, { status: 400 });
-    const user = await upsertAccessUser(
-      { name, email, role },
-      (session.email as string) ?? ""
-    );
-    return Response.json({ user });
-  } catch (err) {
-    return authErrorResponse(err);
+    assertSameOrigin(request);
+    const admin = await requireAdminRole();
+    const input = z
+      .object({
+        email: emailSchema,
+        name: z.string().trim().min(1).max(80),
+        role: z.enum(["admin", "child"]),
+      })
+      .parse(await request.json());
+    return Response.json({
+      user: await upsertAccessUser(input, admin.email || admin.uid),
+    });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }
-
-/** DELETE: remove access — ?email=... (admin only). */
-export async function DELETE(req: Request) {
+export async function DELETE(request: Request) {
   try {
+    assertSameOrigin(request);
     await requireAdminRole();
-    const email = new URL(req.url).searchParams.get("email") ?? "";
-    if (!EMAIL_RE.test(email.trim().toLowerCase())) {
-      return Response.json({ error: "Enter a valid email address." }, { status: 400 });
-    }
-    await removeAccessUser(email);
+    await removeAccessUser(
+      emailSchema.parse(new URL(request.url).searchParams.get("email")),
+    );
     return Response.json({ ok: true });
-  } catch (err) {
-    return authErrorResponse(err);
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }

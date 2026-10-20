@@ -1,40 +1,40 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, Controller, type Resolver } from "react-hook-form";
-import {
-  Box,
-  Button,
-  Card,
-  Checkbox,
-  Chip,
-  CircularProgress,
-  Divider,
-  FormControl,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  Select,
-  Switch,
-  TextField,
-  Typography,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/AddOutlined";
-import SearchIcon from "@mui/icons-material/SearchOutlined";
-import EditIcon from "@mui/icons-material/EditOutlined";
-import DeleteIcon from "@mui/icons-material/DeleteOutlined";
-import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
-import CloseIcon from "@mui/icons-material/CloseOutlined";
-import RemoveCircleOutline from "@mui/icons-material/RemoveCircleOutlined";
-import { useApi, api } from "@/lib/api";
-import { PageHeader, ConfirmDialog, FormDrawer, ErrorState, StatusChip, Thumb, FieldError } from "@/components/ui";
 import { ImageUpload } from "@/components/forms";
+import { ConfirmDialog,ErrorState,FieldError,FormDrawer,PageHeader,StatusChip,Thumb } from "@/components/ui";
+import { api,useApi } from "@/lib/api";
+import { fmtDateTime,num,rs,slugify } from "@/lib/format";
 import { productSchema } from "@/lib/schemas";
-import { rs, num, fmtDateTime, slugify } from "@/lib/format";
-import type { Product, Category } from "@/lib/types";
+import type { Category,Product } from "@/lib/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import AddIcon from "@mui/icons-material/AddOutlined";
+import CloseIcon from "@mui/icons-material/CloseOutlined";
+import DeleteIcon from "@mui/icons-material/DeleteOutlined";
+import EditIcon from "@mui/icons-material/EditOutlined";
+import RemoveCircleOutline from "@mui/icons-material/RemoveCircleOutlined";
+import SearchIcon from "@mui/icons-material/SearchOutlined";
+import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import {
+Box,
+Button,
+Card,
+Checkbox,
+Chip,
+CircularProgress,
+Divider,
+FormControl,
+IconButton,
+InputAdornment,
+InputLabel,
+MenuItem,
+Select,
+Switch,
+TextField,
+Typography,
+} from "@mui/material";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useEffect,useMemo,useState } from "react";
+import { Controller,useFieldArray,useForm,type Resolver } from "react-hook-form";
 
 const BENEFIT_ICONS = ["leaf", "sprout", "droplet", "wheat", "sparkles", "jar", "bowl", "shield"];
 
@@ -48,7 +48,7 @@ type FormValues = {
   compareAtPrice?: number | null;
   variants: { label: string; price?: number; compareAtPrice?: number | null }[];
   weight: string;
-  stock?: number;
+  stock?: number | null;
   images: string[];
   ingredients: { name: string; emoji?: string }[];
   benefits: { icon: string; label: string }[];
@@ -65,7 +65,7 @@ const EMPTY: FormValues = {
   price: undefined,
   variants: [],
   weight: "",
-  stock: 0,
+  stock: null,
   images: [],
   ingredients: [],
   benefits: [],
@@ -83,7 +83,7 @@ function MultiImage({ value, onChange }: { value: string[]; onChange: (v: string
       <Box className="flex flex-wrap gap-2">
         {value.map((url, i) => (
           <Box key={url + i} sx={{ position: "relative", width: 92, height: 92 }}>
-            <Box component="img" src={url} alt="" sx={{ width: 92, height: 92, objectFit: "contain", borderRadius: 2, border: "1px solid #e7ddc2", background: "#f8f4e8" }} />
+            <Box component="img" src={url} alt="" sx={{ width: 92, height: 92, objectFit: "cover", borderRadius: 2, border: "1px solid #e7ddc2" }} />
             {i === 0 && (
               <Chip label="Main" size="small" sx={{ position: "absolute", bottom: 4, left: 4, height: 20, fontSize: 10, background: "#1b3a28", color: "#fff" }} />
             )}
@@ -116,50 +116,6 @@ function MultiImage({ value, onChange }: { value: string[]; onChange: (v: string
   );
 }
 
-type RawVariant = Record<string, unknown>;
-
-// App-seeded products store variants as {weight, regular_price, sale_price, ...}
-// while the form edits {label, price, compareAtPrice}. Translate both ways so
-// the form shows app variants correctly and saving never corrupts their shape.
-function toFormVariants(variants: unknown): FormValues["variants"] {
-  if (!Array.isArray(variants)) return [];
-  return variants.map((v) => {
-    const o = (v ?? {}) as RawVariant;
-    return {
-      label: (o.label as string) ?? (o.weight as string) ?? "",
-      price: (o.price as number) ?? (o.regular_price as number),
-      compareAtPrice: (o.compareAtPrice as number | null) ?? (o.sale_price as number | null) ?? null,
-    };
-  });
-}
-
-function toStoredVariants(formVariants: FormValues["variants"], origVariants: unknown): unknown[] {
-  if (!Array.isArray(origVariants) || origVariants.length === 0) return formVariants;
-  const isAppShape = origVariants.some((v) => v && typeof v === "object" && "regular_price" in (v as RawVariant));
-  if (!isAppShape) return formVariants;
-  return formVariants.map((fv, i) => {
-    const match =
-      (origVariants.find((o) => {
-        const oo = (o ?? {}) as RawVariant;
-        return (oo.weight as string) === fv.label || (oo.label as string) === fv.label;
-      }) as RawVariant | undefined) ?? (origVariants[i] as RawVariant | undefined) ?? {};
-    const grams = parseFloat(String(fv.label ?? "").replace(/[^0-9.]/g, "")) || 0;
-    const pricePer100g =
-      grams > 0 && fv.price != null ? (fv.price / grams) * 100 : ((match.price_per_100g as number) ?? null);
-    return {
-      ...match,
-      id: (match.id as string) ?? `variant:${fv.label}`,
-      weight: fv.label,
-      regular_price: fv.price,
-      sale_price: fv.compareAtPrice ?? null,
-      price_per_100g: pricePer100g,
-      active: (match.active as boolean) ?? true,
-      is_default: (match.is_default as boolean) ?? i === 0,
-      sort_order: (match.sort_order as number) ?? i + 1,
-    };
-  });
-}
-
 function ProductForm({
   initial,
   categories,
@@ -180,19 +136,10 @@ function ProductForm({
     resolver: zodResolver(productSchema) as unknown as Resolver<FormValues>,
     defaultValues: initial ?? EMPTY,
   });
-  const { control, handleSubmit, watch, setValue, reset, formState } = form;
-  const name = watch("name");
+  const { control, handleSubmit, setValue, reset, formState } = form;
 
   useEffect(() => {
-    if (!initial) {
-      reset(EMPTY);
-      return;
-    }
-    // Show app-shaped variants (weight/regular_price) in the form's label/price fields.
-    reset({
-      ...initial,
-      variants: toFormVariants((initial as unknown as { variants?: unknown }).variants),
-    });
+    reset(initial ?? EMPTY);
   }, [initial, reset]);
 
   const variants = useFieldArray({ control, name: "variants" });
@@ -224,12 +171,6 @@ function ProductForm({
     try {
       const payload = {
         ...values,
-        // Round-trip variants to the doc's original shape (app products keep
-        // weight/regular_price; dashboard products keep label/price).
-        variants: toStoredVariants(
-          values.variants,
-          (initial as unknown as { variants?: unknown } | null)?.variants
-        ),
         slug: values.slug?.trim() || slugify(values.name),
         categoryName: categories.find((c) => c.id === values.categoryId)?.name ?? values.categoryName,
       };
@@ -320,7 +261,7 @@ function ProductForm({
           <TextField fullWidth size="small" label="Compare-at price" type="number" slotProps={{ htmlInput: { min: 0 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
         )} />
         <Controller name="stock" control={control} render={({ field }) => (
-          <TextField fullWidth size="small" label="Stock" type="number" slotProps={{ htmlInput: { min: 0 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} />
+          <TextField fullWidth size="small" label="Stock" type="number" helperText="Leave blank if not tracked" slotProps={{ htmlInput: { min: 0, step: 1 } }} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} />
         )} />
       </Box>
 
@@ -445,7 +386,7 @@ function ProductDetail({ product, onClose, onEdit }: { product: Product; onClose
         {[
           ["Price", rs(product.price)],
           ["Compare at", product.compareAtPrice ? rs(product.compareAtPrice) : "—"],
-          ["Stock", num(product.stock)],
+          ["Stock", product.stock == null ? "Not tracked" : num(product.stock)],
           ["Rating", `${product.rating ?? 0} (${product.reviewCount ?? 0})`],
           ["Updated", fmtDateTime(product.updatedAt)],
           ["ID", product.id],
@@ -465,15 +406,9 @@ function ProductDetail({ product, onClose, onEdit }: { product: Product; onClose
       {!!product.variants?.length && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Variants</Typography>
-          {product.variants.map((v, i) => {
-            const vv = v as unknown as Record<string, unknown>;
-            const label = (vv.label as string) ?? (vv.weight as string) ?? "";
-            const price = (vv.price as number) ?? (vv.regular_price as number);
-            const was = (vv.compareAtPrice as number | null) ?? (vv.sale_price as number | null);
-            return (
-              <Typography key={i} variant="body2" className="tnum">{label} — {rs(price)}{was ? ` (was ${rs(was)})` : ""}</Typography>
-            );
-          })}
+          {product.variants.map((v, i) => (
+            <Typography key={i} variant="body2" className="tnum">{v.label} — {rs(v.price)}{v.compareAtPrice ? ` (was ${rs(v.compareAtPrice)})` : ""}</Typography>
+          ))}
         </Box>
       )}
       {!!product.ingredients?.length && (
@@ -515,8 +450,8 @@ function Page() {
     if (q) list = list.filter((p) => [p.name, p.categoryName, p.slug].some((v) => String(v ?? "").toLowerCase().includes(q)));
     if (category !== "all") list = list.filter((p) => p.categoryId === category);
     if (status !== "all") list = list.filter((p) => (status === "active" ? p.isActive : !p.isActive));
-    if (stock === "in") list = list.filter((p) => (p.stock ?? 0) > 0);
-    if (stock === "out") list = list.filter((p) => (p.stock ?? 0) <= 0);
+    if (stock === "in") list = list.filter((p) => p.stock == null || p.stock > 0);
+    if (stock === "out") list = list.filter((p) => p.stock === 0);
     return list;
   }, [data, search, category, status, stock]);
 
@@ -557,15 +492,6 @@ function Page() {
     }
   }
 
-  async function toggleActive(p: Product) {
-    try {
-      await api(`/api/admin/products/${p.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !p.isActive }) });
-      refresh();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed.");
-    }
-  }
-
   async function confirmDelete() {
     if (!deleting) return;
     setBusy(true);
@@ -592,7 +518,7 @@ function Page() {
       compareAtPrice: p.compareAtPrice ?? null,
       variants: (p.variants ?? []).map((v) => ({ label: v.label, price: v.price, compareAtPrice: v.compareAtPrice ?? null })),
       weight: p.weight ?? "",
-      stock: p.stock ?? 0,
+      stock: p.stock,
       images: p.images ?? [],
       ingredients: (p.ingredients ?? []).map((x) => ({ name: x.name, emoji: x.emoji ?? "" })),
       benefits: (p.benefits ?? []).map((b) => ({ icon: b.icon, label: b.label })),
@@ -685,11 +611,9 @@ function Page() {
                   </td>
                   <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
                   <td style={{ padding: "10px 12px" }} className="tnum">
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: (p.stock ?? 0) <= 0 ? "#c0392b" : undefined }}>{p.stock ?? 0}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: p.stock === 0 ? "#c0392b" : undefined }}>{p.stock == null ? "Not tracked" : p.stock}</Typography>
                   </td>
-                  <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
-                    <Switch size="small" checked={p.isActive} onChange={() => toggleActive(p)} aria-label="Toggle active" />
-                  </td>
+                  <td style={{ padding: "10px 12px" }}><StatusChip status={p.isActive ? "active" : "inactive"} /></td>
                   <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
                     <Switch size="small" checked={p.isFeatured} onChange={() => toggleFeatured(p)} aria-label="Toggle featured" />
                   </td>

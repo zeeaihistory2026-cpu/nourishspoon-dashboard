@@ -30,7 +30,12 @@ interface AccessUser {
 }
 
 function Page() {
-  const { data, loading, error, refresh: load } = useApi<{ users: AccessUser[] }>("/api/admin/access");
+  const {
+    data,
+    loading,
+    error,
+    refresh: load,
+  } = useApi<{ users: AccessUser[] }>("/api/admin/access");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "child">("child");
@@ -66,12 +71,17 @@ function Page() {
     if (!deleting) return;
     setRemoving(true);
     try {
-      await api(`/api/admin/access?email=${encodeURIComponent(deleting.email)}`, { method: "DELETE" });
+      await api(
+        `/api/admin/access?email=${encodeURIComponent(deleting.email)}`,
+        { method: "DELETE" },
+      );
       setNotice(`Removed access for ${deleting.name} (${deleting.email}).`);
       setDeleting(null);
       await load();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Could not remove user.");
+      setFormError(
+        err instanceof Error ? err.message : "Could not remove user.",
+      );
     } finally {
       setRemoving(false);
     }
@@ -82,20 +92,31 @@ function Page() {
   return (
     <Box className="flex flex-col gap-5">
       <Box>
-        <Typography variant="h4" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700 }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontWeight: 700,
+          }}
+        >
           User Access
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-          Give dashboard access to anyone. Admins can manage everything including users. Child
-          accounts can use the dashboard but cannot manage users.
+          Give dashboard access to anyone. Admins can manage everything
+          including users. Child accounts can use the dashboard but cannot
+          manage users.
         </Typography>
       </Box>
 
       {notice && (
-        <Alert severity="success" onClose={() => setNotice(null)}>{notice}</Alert>
+        <Alert severity="success" onClose={() => setNotice(null)}>
+          {notice}
+        </Alert>
       )}
       {formError && (
-        <Alert severity="error" onClose={() => setFormError(null)}>{formError}</Alert>
+        <Alert severity="error" onClose={() => setFormError(null)}>
+          {formError}
+        </Alert>
       )}
 
       <Card sx={{ p: 3 }}>
@@ -103,11 +124,15 @@ function Page() {
           Give access
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-          The person signs in with their own Google/email account on the login page. They must
-          already have a Firebase account (sign up with email &amp; password) — this page only
-          grants them dashboard access.
+          The person signs in with their own Google/email account on the login
+          page. They must already have a Firebase account (sign up with email
+          &amp; password) — this page only grants them dashboard access.
         </Typography>
-        <Box component="form" onSubmit={addUser} className="flex flex-wrap gap-3 items-end">
+        <Box
+          component="form"
+          onSubmit={addUser}
+          className="flex flex-wrap gap-3 items-end"
+        >
           <TextField
             label="Full name"
             required
@@ -136,7 +161,13 @@ function Page() {
               <MenuItem value="child">Child</MenuItem>
             </Select>
           </FormControl>
-          <Button type="submit" variant="contained" startIcon={<AddIcon />} disabled={saving} sx={{ px: 3, py: 1.3 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            startIcon={<AddIcon />}
+            disabled={saving}
+            sx={{ px: 3, py: 1.3 }}
+          >
             {saving ? "Adding..." : "Give access"}
           </Button>
         </Box>
@@ -144,18 +175,35 @@ function Page() {
 
       <Card sx={{ overflow: "hidden" }}>
         <Box className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 560 }}>
+          <table
+            className="w-full text-sm"
+            style={{ borderCollapse: "collapse", minWidth: 560 }}
+          >
             <thead>
               <tr style={{ borderBottom: "1px solid #ece4cb" }}>
                 {["Name", "Email", "Access", "Added", ""].map((h, i) => (
-                  <th key={i} style={{ textAlign: i === 4 ? "right" : "left", padding: "12px 16px", paddingRight: i === 4 ? 20 : 16, fontSize: 12.5, fontWeight: 800, color: "#8d8670" }}>{h}</th>
+                  <th
+                    key={i}
+                    style={{
+                      textAlign: i === 4 ? "right" : "left",
+                      padding: "12px 16px",
+                      paddingRight: i === 4 ? 20 : 16,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      color: "#8d8670",
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.email} style={{ borderBottom: "1px solid #f1ebd6" }}>
-                  <td style={{ padding: "11px 16px", fontWeight: 700 }}>{u.name}</td>
+                  <td style={{ padding: "11px 16px", fontWeight: 700 }}>
+                    {u.name}
+                  </td>
                   <td style={{ padding: "11px 16px" }}>{u.email}</td>
                   <td style={{ padding: "11px 16px" }}>
                     <Chip
@@ -169,9 +217,16 @@ function Page() {
                     />
                   </td>
                   <td style={{ padding: "11px 16px", color: "#57523f" }}>
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                    {u.createdAt
+                      ? new Date(u.createdAt).toLocaleDateString()
+                      : "—"}
                   </td>
-                  <td style={{ padding: "11px 20px 11px 16px", textAlign: "right" }}>
+                  <td
+                    style={{
+                      padding: "11px 20px 11px 16px",
+                      textAlign: "right",
+                    }}
+                  >
                     <Button
                       size="small"
                       variant="text"
@@ -186,8 +241,19 @@ function Page() {
               ))}
               {!users.length && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>
-                    {loading ? "Loading users..." : error ? error : "No extra users yet. The owner account always has access."}
+                  <td
+                    colSpan={5}
+                    style={{
+                      padding: 32,
+                      textAlign: "center",
+                      color: "#8d8670",
+                    }}
+                  >
+                    {loading
+                      ? "Loading users..."
+                      : error
+                        ? error
+                        : "No extra users yet. The owner account always has access."}
                   </td>
                 </tr>
               )}
@@ -200,12 +266,18 @@ function Page() {
         <DialogTitle>Remove access?</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            {deleting?.name} ({deleting?.email}) will no longer be able to sign in to the dashboard.
+            {deleting?.name} ({deleting?.email}) will no longer be able to sign
+            in to the dashboard.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleting(null)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={removeUser} disabled={removing}>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={removeUser}
+            disabled={removing}
+          >
             {removing ? "Removing..." : "Remove access"}
           </Button>
         </DialogActions>

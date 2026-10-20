@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -8,11 +9,8 @@ import {
   Card,
   CardContent,
   Checkbox,
-  Select,
-  MenuItem,
   Switch,
   Typography,
-  IconButton,
 } from "@mui/material";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import ShoppingCartOutlined from "@mui/icons-material/ShoppingCartOutlined";
@@ -37,19 +35,15 @@ import PersonOutline from "@mui/icons-material/PersonOutlineOutlined";
 import SpaOutlined from "@mui/icons-material/SpaOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
-import ReceiptOutlined from "@mui/icons-material/ReceiptOutlined";
-import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
-import CalculateOutlined from "@mui/icons-material/CalculateOutlined";
-import PersonAddOutlined from "@mui/icons-material/PersonAddOutlined";
-import EmojiEventsOutlined from "@mui/icons-material/EmojiEventsOutlined";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeftOutlined";
-import ChevronRightIcon from "@mui/icons-material/ChevronRightOutlined";
-import InboxOutlined from "@mui/icons-material/InboxOutlined";
-import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { useApi, api } from "@/lib/api";
-import { rs, num, pad2, fmtDate } from "@/lib/format";
-import { StatusChip, Thumb } from "@/components/ui";
-import { LeafSprig } from "@/components/Shell";
+import { rs, num, pad2 } from "@/lib/format";
+import { Thumb, ErrorState } from "@/components/ui";
+import { DashboardHero } from "@/components/DashboardHero";
+import { SalesOverview, type SalesPeriod } from "@/components/SalesOverview";
+import {
+  RecentOrderTable,
+  TrackingRequestTable,
+} from "@/components/DashboardOrderTables";
 import type { DashboardStats } from "@/lib/types";
 
 interface DashboardData {
@@ -76,7 +70,7 @@ interface DashboardData {
     name: string;
     weight: string;
     price: number;
-    stock: number;
+    stock: number | null;
     isActive: boolean;
     isFeatured: boolean;
     image: string;
@@ -89,7 +83,7 @@ interface DashboardData {
     orders: number;
   }[];
   sales?: {
-    [K in "weekly" | "monthly" | "quarterly" | "yearly"]: {
+    [K in "weekly" | "monthly"]: {
       total: number;
       orders: number;
       delta: number;
@@ -102,7 +96,13 @@ interface DashboardData {
 
 /* ------------------------------- sparkline ------------------------------- */
 
-function Sparkline({ values, tone }: { values: number[]; tone: "green" | "gold" }) {
+function Sparkline({
+  values,
+  tone,
+}: {
+  values: number[];
+  tone: "green" | "gold";
+}) {
   const W = 200;
   const H = 44;
   const max = Math.max(1, ...values);
@@ -113,14 +113,29 @@ function Sparkline({ values, tone }: { values: number[]; tone: "green" | "gold" 
     const y = H - 6 - ((v - min) / range) * (H - 12);
     return [x, y] as const;
   });
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const line = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
   const area = `${line} L${W},${H} L0,${H} Z`;
-  const fill = tone === "green" ? "rgba(127,176,105,0.18)" : "rgba(201,162,39,0.18)";
+  const fill =
+    tone === "green" ? "rgba(127,176,105,0.18)" : "rgba(201,162,39,0.18)";
   const stroke = tone === "green" ? "#7fb069" : "#d9b53a";
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 40, display: "block" }} aria-hidden>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      style={{ width: "100%", height: 40, display: "block" }}
+      aria-hidden
+    >
       <path d={area} fill={fill} />
-      <path d={line} fill="none" stroke={stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -159,7 +174,10 @@ function KpiCard({
         cursor: "pointer",
         overflow: "hidden",
         transition: "box-shadow .15s ease, transform .15s ease",
-        "&:hover": { boxShadow: "0 6px 18px rgba(27,58,40,0.12)", transform: "translateY(-1px)" },
+        "&:hover": {
+          boxShadow: "0 6px 18px rgba(27,58,40,0.12)",
+          transform: "translateY(-1px)",
+        },
       }}
     >
       <CardContent sx={{ p: 2.2, pb: 1.4, "&:last-child": { pb: 1.4 } }}>
@@ -181,13 +199,27 @@ function KpiCard({
             {icon}
           </Box>
         </Box>
-        <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", mt: 1.2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontSize: 12,
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            mt: 1.2,
+          }}
+        >
           {label}
         </Typography>
         <Box className="flex items-baseline gap-1 flex-wrap">
           <Typography
             className="tnum"
-            sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 27, lineHeight: 1.15 }}
+            sx={{
+              fontFamily: "var(--font-display), Georgia, serif",
+              fontWeight: 700,
+              fontSize: 27,
+              lineHeight: 1.15,
+            }}
           >
             {value}
           </Typography>
@@ -203,11 +235,18 @@ function KpiCard({
               whiteSpace: "nowrap",
             }}
           >
-            {up ? <TrendingUpIcon sx={{ fontSize: 13 }} /> : <TrendingDownIcon sx={{ fontSize: 13 }} />}
+            {up ? (
+              <TrendingUpIcon sx={{ fontSize: 13 }} />
+            ) : (
+              <TrendingDownIcon sx={{ fontSize: 13 }} />
+            )}
             +{delta}%
           </Typography>
         </Box>
-        <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: "text.secondary", fontSize: 11 }}
+        >
           {caption}
         </Typography>
       </CardContent>
@@ -224,27 +263,45 @@ function SectionHead({
   title,
   caption,
   action,
+  alignCardRow = false,
 }: {
   title: string;
   caption?: string;
   action?: React.ReactNode;
+  alignCardRow?: boolean;
 }) {
   return (
-    <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap" sx={{ minHeight: 38 }}>
-      <Box className="flex items-baseline gap-3 flex-wrap">
+    <Box
+      className="flex items-start justify-between gap-3 mb-3 flex-wrap"
+      sx={{
+        minHeight: { xs: 38, lg: alignCardRow ? 64 : 38 },
+        flexWrap: alignCardRow ? { xs: "wrap", sm: "nowrap" } : "wrap",
+      }}
+    >
+      <Box
+        className="flex items-baseline gap-3 flex-wrap"
+        sx={alignCardRow ? { minWidth: 0, display: "block" } : undefined}
+      >
         <Typography
           variant="h5"
-          sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}
+          sx={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontWeight: 700,
+            fontSize: 21,
+          }}
         >
           {title}
         </Typography>
         {caption && (
-          <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", fontSize: 12.5 }}
+          >
             {caption}
           </Typography>
         )}
       </Box>
-      {action}
+      {action && <Box sx={{ flexShrink: 0 }}>{action}</Box>}
     </Box>
   );
 }
@@ -277,8 +334,19 @@ function HomeSectionCard({
   onPreview: () => void;
 }) {
   return (
-    <Card sx={{ p: 1.6, display: "flex", flexDirection: "column", gap: 1.2, height: "100%" }}>
-      <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, px: 0.5 }}>
+    <Card
+      sx={{
+        p: 1.6,
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.2,
+        height: "100%",
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: 800, fontSize: 13.5, px: 0.5 }}
+      >
         {title}
       </Typography>
       <Box
@@ -320,7 +388,11 @@ function HomeSectionCard({
 
 /* ------------------------------- sales line chart ------------------------------- */
 
-function SalesChart({ points }: { points: { label: string; revenue: number; orders: number }[] }) {
+function SalesChart({
+  points,
+}: {
+  points: { label: string; revenue: number; orders: number }[];
+}) {
   const W = 640;
   const H = 170;
   const PAD_L = 34;
@@ -330,30 +402,84 @@ function SalesChart({ points }: { points: { label: string; revenue: number; orde
   const maxRev = Math.max(0, ...points.map((d) => d.revenue));
   const maxY = Math.max(4, maxRev);
   const steps = 4;
-  const x = (i: number) => PAD_L + (i / Math.max(1, points.length - 1)) * (W - PAD_L - PAD_R);
+  const x = (i: number) =>
+    PAD_L + (i / Math.max(1, points.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v: number) => PAD_T + (1 - v / maxY) * (H - PAD_T - PAD_B);
-  const line = points.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.revenue).toFixed(1)}`).join(" ");
+  const line = points
+    .map(
+      (d, i) =>
+        `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d.revenue).toFixed(1)}`,
+    )
+    .join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="Sales line chart">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: "100%", height: "auto", display: "block" }}
+      role="img"
+      aria-label="Sales line chart"
+    >
       {Array.from({ length: steps + 1 }).map((_, s) => {
         const v = (maxY / steps) * s;
         const yy = y(v);
         return (
           <g key={s}>
-            <line x1={PAD_L} x2={W - PAD_R} y1={yy} y2={yy} stroke="#ece4cb" strokeWidth="1" />
-            <text x={PAD_L - 8} y={yy + 3.5} textAnchor="end" fontSize="11" fill="#8d8670" fontWeight={600}>
+            <line
+              x1={PAD_L}
+              x2={W - PAD_R}
+              y1={yy}
+              y2={yy}
+              stroke="#ece4cb"
+              strokeWidth="1"
+            />
+            <text
+              x={PAD_L - 8}
+              y={yy + 3.5}
+              textAnchor="end"
+              fontSize="11"
+              fill="#8d8670"
+              fontWeight={600}
+            >
               {v >= 1000 ? `${Math.round(v / 1000)}k` : v}
             </text>
           </g>
         );
       })}
-      {points.length > 0 && <path d={line} fill="none" stroke="#1b3a28" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+      {points.length > 0 && (
+        <path
+          d={line}
+          fill="none"
+          stroke="#1b3a28"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
       {points.map((d, i) => (
         <g key={i}>
-          <circle cx={x(i)} cy={y(d.revenue)} r="4.5" fill="#fffdf7" stroke="#1b3a28" strokeWidth="2.5" />
-          <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="11.5" fill="#57523f" fontWeight={600}>
-            {d.label}
-          </text>
+          <circle
+            cx={x(i)}
+            cy={y(d.revenue)}
+            r="4.5"
+            fill="#fffdf7"
+            stroke="#1b3a28"
+            strokeWidth="2.5"
+          />
+          {(points.length <= 8 ||
+            i % Math.ceil(points.length / 6) === 0 ||
+            i === points.length - 1) && (
+            <text
+              x={x(i)}
+              y={H - 8}
+              textAnchor={
+                i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"
+              }
+              fontSize="11.5"
+              fill="#57523f"
+              fontWeight={600}
+            >
+              {d.label}
+            </text>
+          )}
           <title>{`${d.label}: ${rs(d.revenue)} · ${d.orders} orders`}</title>
         </g>
       ))}
@@ -363,28 +489,94 @@ function SalesChart({ points }: { points: { label: string; revenue: number; orde
 
 /* --------------------------------- manage screens --------------------------------- */
 
-const MANAGE_SCREENS: { href: string; title: string; desc: string; icon: React.ReactNode }[] = [
-  { href: "/payment-methods", title: "Payment Methods", desc: "Manage payment options shown in the app.", icon: <CreditCardOutlined /> },
-  { href: "/delivery-information", title: "Delivery Information", desc: "Update delivery charges, areas and information.", icon: <LocalShippingOutlined /> },
-  { href: "/faq", title: "FAQ / Help & Support", desc: "Manage frequently asked questions.", icon: <HelpOutline /> },
-  { href: "/our-story", title: "Our Story", desc: "Share your brand story and values.", icon: <NatureOutlined /> },
-  { href: "/reviews", title: "Reviews", desc: "Manage customer reviews and ratings.", icon: <StarBorderOutlined /> },
-  { href: "/notifications", title: "Notifications", desc: "Send and manage app notifications.", icon: <NotificationsNoneOutlined /> },
-  { href: "/refer-earn", title: "Refer & Earn", desc: "Manage refer & earn content and rewards.", icon: <PeopleOutline /> },
-  { href: "/offers-points", title: "Offers & Points", desc: "Create and manage offers and reward points.", icon: <LocalOfferOutlined /> },
-  { href: "/wishlist", title: "Wishlist", desc: "Manage user wishlists and featured products.", icon: <FavoriteBorderOutlined /> },
-  { href: "/customers", title: "Profile & Auth", desc: "Manage profile settings, signup and authentication.", icon: <PersonOutline /> },
+const MANAGE_SCREENS: {
+  href: string;
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    href: "/payment-methods",
+    title: "Payment Methods",
+    desc: "Manage payment options shown in the app.",
+    icon: <CreditCardOutlined />,
+  },
+  {
+    href: "/delivery-information",
+    title: "Delivery Information",
+    desc: "Update delivery charges, areas and information.",
+    icon: <LocalShippingOutlined />,
+  },
+  {
+    href: "/faq",
+    title: "FAQ / Help & Support",
+    desc: "Manage frequently asked questions.",
+    icon: <HelpOutline />,
+  },
+  {
+    href: "/our-story",
+    title: "Our Story",
+    desc: "Share your brand story and values.",
+    icon: <NatureOutlined />,
+  },
+  {
+    href: "/reviews",
+    title: "Reviews",
+    desc: "Manage customer reviews and ratings.",
+    icon: <StarBorderOutlined />,
+  },
+  {
+    href: "/notifications",
+    title: "Notifications",
+    desc: "Send and manage app notifications.",
+    icon: <NotificationsNoneOutlined />,
+  },
+  {
+    href: "/refer-earn",
+    title: "Refer & Earn",
+    desc: "Manage refer & earn content and rewards.",
+    icon: <PeopleOutline />,
+  },
+  {
+    href: "/offers-points",
+    title: "Offers & Points",
+    desc: "Create and manage offers and reward points.",
+    icon: <LocalOfferOutlined />,
+  },
+  {
+    href: "/wishlist",
+    title: "Wishlist",
+    desc: "Manage user wishlists and featured products.",
+    icon: <FavoriteBorderOutlined />,
+  },
+  {
+    href: "/customers",
+    title: "Profile & Auth",
+    desc: "Manage profile settings, signup and authentication.",
+    icon: <PersonOutline />,
+  },
 ];
 
 /* ----------------------------------- page ----------------------------------- */
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data, loading, refresh } = useApi<DashboardData>("/api/admin/dashboard");
+  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>("weekly");
+  const { data, loading, error, refresh } = useApi<DashboardData>(
+    "/api/admin/dashboard",
+    true,
+  );
 
-  async function toggleControlProduct(id: string, field: "isActive" | "isFeatured", value: boolean) {
+  async function toggleControlProduct(
+    id: string,
+    field: "isActive" | "isFeatured",
+    value: boolean,
+  ) {
     try {
-      await api(`/api/admin/products/${id}`, { method: "PATCH", body: JSON.stringify({ [field]: value }) });
+      await api(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ [field]: value }),
+      });
       refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Update failed.");
@@ -392,40 +584,52 @@ export default function DashboardPage() {
   }
 
   const stats: DashboardStats = data?.stats ?? {
-    totalProducts: 0, productsDelta: 0, pendingOrders: 0, pendingDelta: 0,
-    totalOrders: 0, ordersDelta: 0, revenue: 0, revenueDelta: 0, activeOffers: 0, offersDelta: 0,
+    totalProducts: 0,
+    productsDelta: 0,
+    pendingOrders: 0,
+    pendingDelta: 0,
+    totalOrders: 0,
+    ordersDelta: 0,
+    revenue: 0,
+    revenueDelta: 0,
+    activeOffers: 0,
+    offersDelta: 0,
   };
 
   // Weekly trend for the KPI sparklines (real order data; gentle curve when no data yet).
   const weekRev = (data?.weeklySales ?? []).map((d) => d.revenue);
   const weekOrders = (data?.weeklySales ?? []).map((d) => d.orders);
-  const trendRev = weekRev.length && Math.max(...weekRev) > 0 ? weekRev : [2, 3, 2.4, 3.8, 3.2, 4.6, 4];
-  const trendOrders = weekOrders.length && Math.max(...weekOrders) > 0 ? weekOrders : [1, 2, 1.5, 2.6, 2.2, 3.2, 2.8];
+  const trendRev = weekRev.length ? weekRev : [0, 0];
+  const trendOrders = weekOrders.length ? weekOrders : [0, 0];
 
   // Selected sales range (weekly, matching the design's "Last 7 Days").
-  const salesData = data?.sales?.weekly ?? {    total: (data?.weeklySales ?? []).reduce((s, d) => s + d.revenue, 0),
+  const salesData = data?.sales?.[salesPeriod] ?? {
+    total: (data?.weeklySales ?? []).reduce((s, d) => s + d.revenue, 0),
     orders: (data?.weeklySales ?? []).reduce((s, d) => s + d.orders, 0),
     delta: 0,
     prevLabel: "vs previous week",
     rangeLabel: "last 7 days",
-    points: (data?.weeklySales ?? []).map((d) => ({ label: d.label, revenue: d.revenue, orders: d.orders })),
+    points: (data?.weeklySales ?? []).map((d) => ({
+      label: d.label,
+      revenue: d.revenue,
+      orders: d.orders,
+    })),
   };
 
-  // Top performing day (highest revenue in the week).
-  const topDay = (salesData.points || []).reduce(
-    (best: { label: string; revenue: number; orders: number }, p: { label: string; revenue: number; orders: number }) =>
-      p.revenue > best.revenue ? p : best,
-    { label: "—", revenue: 0, orders: 0 }
-  );
+  const tabProduct =
+    data?.controlProducts.find((product) =>
+      /classic panjeeri/i.test(product.name),
+    ) || data?.controlProducts[0];
+  if (error) return <ErrorState message={error} onRetry={refresh} />;
 
   return (
     <Box className="flex flex-col gap-5">
       {/* Welcome heading — with script flourish top-right */}
-      <Box sx={{ position: "relative" }}>
+      <Box sx={{ position: "relative", pr: { md: 31 } }}>
         <Typography
           variant="h3"
           sx={{
-            fontFamily: '"Playfair Display", Georgia, serif',
+            fontFamily: "var(--font-display), Georgia, serif",
             fontWeight: 700,
             fontSize: { xs: 30, md: 38 },
             color: "#1b3a28",
@@ -445,88 +649,174 @@ export default function DashboardPage() {
             maxWidth: 640,
           }}
         >
-          Manage your products, orders, and app content for Nourish Spoon. Keep nourishing
-          lives with wholesome goodness.
+          Manage your products, orders, and app content for Nourish Spoon. Keep
+          nourishing lives with wholesome goodness.
         </Typography>
-        <Box sx={{ position: "absolute", right: 0, top: -6, display: { xs: "none", md: "flex" }, alignItems: "flex-start", gap: 1, pointerEvents: "none" }}>
-          <Box sx={{ transform: "scaleX(-1)", opacity: 0.9, mt: 1 }}>
-            <LeafSprig />
-          </Box>
-          <Typography
-            sx={{
-              fontFamily: '"Pinyon Script", cursive',
-              color: "#b08a2e",
-              fontSize: 30,
-              lineHeight: 1.05,
-              textAlign: "right",
-              pt: 0.5,
-            }}
-          >
-            Good Food
-            <br />
-            Brighter Tomorrows
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Hero banner — exact composed banner (photo + headline + CTA + script baked in) */}
-      <Card
-        component={Link}
-        href="/products"
-        sx={{
-          borderRadius: 4,
-          overflow: "hidden",
-          position: "relative",
-          border: "1px solid #e7ddc2",
-          display: "block",
-          textDecoration: "none",
-          cursor: "pointer",
-        }}
-      >
         <Box
           component="img"
-          src="/assets/brand/banner-exact.jpg"
-          alt="Nourish Spoon — Wholesome Goodness for Brighter Days"
-          sx={{ display: "block", width: "100%", height: "auto" }}
+          src="/assets/brand/header-flourish.png"
+          alt=""
+          aria-hidden
+          sx={{
+            position: "absolute",
+            right: -8,
+            top: -6,
+            width: 285,
+            height: 92,
+            objectFit: "cover",
+            display: { xs: "none", md: "block" },
+            pointerEvents: "none",
+          }}
         />
-      </Card>
+      </Box>
+
+      <DashboardHero />
 
       {/* KPI cards */}
-      <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" } }}>
-        <KpiCard icon={<Inventory2Outlined />} label="Total Products" value={loading ? "…" : num(stats.totalProducts)} delta={stats.productsDelta} caption="vs last month" href="/products" trend={trendRev} tone="green" />
-        <KpiCard icon={<ShoppingCartOutlined />} label="Pending Orders" value={loading ? "…" : pad2(stats.pendingOrders)} delta={stats.pendingDelta} caption="vs yesterday" href="/orders" trend={trendOrders} tone="gold" />
-        <KpiCard icon={<ReceiptLongOutlined />} label="Total Orders" value={loading ? "…" : num(stats.totalOrders)} delta={stats.ordersDelta} caption="vs last month" href="/orders" trend={trendOrders} tone="green" />
-        <KpiCard icon={<AccountBalanceWalletOutlined />} label="Revenue" value={loading ? "…" : rs(stats.revenue)} delta={stats.revenueDelta} caption="vs last month" href="/orders" trend={trendRev} tone="gold" />
-        <KpiCard icon={<LocalOfferOutlined />} label="Active Offers" value={loading ? "…" : pad2(stats.activeOffers)} delta={stats.offersDelta} caption="Live now" href="/offers-points" trend={trendRev} tone="gold" />
+      <Box
+        className="grid gap-4"
+        sx={{
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            md: "repeat(3, 1fr)",
+            lg: "repeat(5, 1fr)",
+          },
+        }}
+      >
+        <KpiCard
+          icon={<Inventory2Outlined />}
+          label="Total Products"
+          value={loading ? "…" : num(stats.totalProducts)}
+          delta={stats.productsDelta}
+          caption="vs last month"
+          href="/products"
+          trend={trendRev}
+          tone="green"
+        />
+        <KpiCard
+          icon={<ShoppingCartOutlined />}
+          label="Pending Orders"
+          value={loading ? "…" : pad2(stats.pendingOrders)}
+          delta={stats.pendingDelta}
+          caption="vs yesterday"
+          href="/orders"
+          trend={trendOrders}
+          tone="gold"
+        />
+        <KpiCard
+          icon={<ReceiptLongOutlined />}
+          label="Total Orders"
+          value={loading ? "…" : num(stats.totalOrders)}
+          delta={stats.ordersDelta}
+          caption="vs last month"
+          href="/orders"
+          trend={trendOrders}
+          tone="green"
+        />
+        <KpiCard
+          icon={<AccountBalanceWalletOutlined />}
+          label="Revenue"
+          value={loading ? "…" : rs(stats.revenue)}
+          delta={stats.revenueDelta}
+          caption="vs last month"
+          href="/orders"
+          trend={trendRev}
+          tone="gold"
+        />
+        <KpiCard
+          icon={<LocalOfferOutlined />}
+          label="Active Offers"
+          value={loading ? "…" : pad2(stats.activeOffers)}
+          delta={stats.offersDelta}
+          caption="Live now"
+          href="/offers-points"
+          trend={trendRev}
+          tone="gold"
+        />
       </Box>
 
       {/* Main two-column area */}
-      <Box className="grid gap-5" sx={{ gridTemplateColumns: { xs: "1fr", lg: "7fr 5fr" } }}>
+      <Box
+        className="grid gap-5"
+        sx={{
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "minmax(0, 7fr) minmax(0, 5fr)",
+          },
+        }}
+      >
         <Box className="flex flex-col gap-5 min-w-0">
           {/* Homepage Sections */}
           <Box>
             <SectionHead
               title="Homepage Sections"
+              alignCardRow
               caption="Manage the content shown on your app home screen."
               action={
-                <Button variant="outlined" size="small" startIcon={<SwapVertIcon />} onClick={() => router.push("/home-content")} sx={{ borderRadius: 99 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<SwapVertIcon />}
+                  onClick={() => router.push("/home-content")}
+                  sx={{ borderRadius: 99 }}
+                >
                   Reorder Sections
                 </Button>
               }
             />
-            <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, alignItems: "stretch" }}>
-              <HomeSectionCard title="Hero Banner" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/hero-banner.jpg" alt="Hero banner" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <Box
+              className="grid gap-4"
+              sx={{
+                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+                alignItems: "stretch",
+              }}
+            >
+              <HomeSectionCard
+                title="Hero Banner"
+                onEdit={() => router.push("/home-content")}
+                onPreview={() => router.push("/home-content?preview=1")}
+              >
+                <Box
+                  component="img"
+                  src="/assets/brand/hero-branded.jpg"
+                  alt="Hero banner"
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </HomeSectionCard>
-              <HomeSectionCard title="Best Sellers" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box component="img" src="/assets/brand/bestsellers-branded.jpg" alt="Best sellers" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <HomeSectionCard
+                title="Best Sellers"
+                onEdit={() => router.push("/home-content")}
+                onPreview={() => router.push("/home-content?preview=1")}
+              >
+                <Box
+                  component="img"
+                  src="/assets/brand/bestsellers-branded.jpg"
+                  alt="Best sellers"
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </HomeSectionCard>
-              <HomeSectionCard title="Product Tabs" onEdit={() => router.push("/home-content")} onPreview={() => router.push("/home-content?preview=1")}>
-                <Box className="flex flex-col justify-center gap-2 h-full" sx={{ background: "#fbf6e7", px: 1.5, py: 1 }}>
+              <HomeSectionCard
+                title="Product Tabs"
+                onEdit={() => router.push("/home-content")}
+                onPreview={() => router.push("/home-content?preview=1")}
+              >
+                <Box
+                  className="flex flex-col justify-center gap-2 h-full"
+                  sx={{ background: "#fbf6e7", px: 1.5, py: 1 }}
+                >
                   <Box className="flex items-center gap-1.5">
                     {[
-                      { label: "Panjeeri", icon: <SpaOutlined />, active: true },
-                      { label: "Energy Balls", icon: <Inventory2Outlined />, active: false },
+                      {
+                        label: "Panjeeri",
+                        icon: <SpaOutlined />,
+                        active: true,
+                      },
+                      {
+                        label: "Energy Balls",
+                        icon: <Inventory2Outlined />,
+                        active: false,
+                      },
                     ].map((t) => (
                       <Box
                         key={t.label}
@@ -543,197 +833,145 @@ export default function DashboardPage() {
                         }}
                       >
                         {t.icon}
-                        <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 800 }}>{t.label}</Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{ fontSize: 11, fontWeight: 800 }}
+                        >
+                          {t.label}
+                        </Typography>
                       </Box>
                     ))}
                   </Box>
                   <Box className="flex items-center gap-2">
-                    <Box component="img" src="/assets/products/sq-panjeeri-bowl-v2.jpg" alt="Panjeeri" sx={{ width: 44, height: 44, borderRadius: 1.5, objectFit: "cover", border: "1px solid #ece4cb" }} />
+                    <Box
+                      component="img"
+                      src="/assets/products/sq-panjeeri-bowl-v2.jpg"
+                      alt="Panjeeri"
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 1.5,
+                        objectFit: "cover",
+                        border: "1px solid #ece4cb",
+                      }}
+                    />
                     <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 12.5, lineHeight: 1.25 }}>Classic Panjeeri</Typography>
-                      <Typography variant="caption" sx={{ color: "#8d8670", fontSize: 11 }}>Rs. 1,499 · 250g</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 800,
+                          fontSize: 12.5,
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {tabProduct?.name || "Loading product…"}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "#8d8670", fontSize: 11 }}
+                      >
+                        {tabProduct
+                          ? `${rs(tabProduct.price)} · ${tabProduct.weight || "Pack"}`
+                          : "—"}
+                      </Typography>
                     </Box>
                     <Box sx={{ flex: 1 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11, color: "#2e7d4f", background: "#e9f5ec", px: 1, py: 0.4, borderRadius: 1 }}>In stock</Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: 11,
+                        color: "#2e7d4f",
+                        background: "#e9f5ec",
+                        px: 1,
+                        py: 0.4,
+                        borderRadius: 1,
+                      }}
+                    >
+                      {tabProduct
+                        ? tabProduct.stock === null
+                          ? "Available"
+                          : tabProduct.stock > 0
+                            ? "In stock"
+                            : "Out of stock"
+                        : "—"}
+                    </Typography>
                   </Box>
                 </Box>
               </HomeSectionCard>
-              <HomeSectionCard title="Onboarding Slides" onEdit={() => router.push("/onboarding")} onPreview={() => router.push("/onboarding?preview=1")}>
-                <Box component="img" src="/assets/brand/onboarding-branded.jpg" alt="Onboarding slides" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <HomeSectionCard
+                title="Onboarding Slides"
+                onEdit={() => router.push("/onboarding")}
+                onPreview={() => router.push("/onboarding?preview=1")}
+              >
+                <Box
+                  component="img"
+                  src="/assets/brand/onboarding-branded.jpg"
+                  alt="Onboarding slides"
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </HomeSectionCard>
             </Box>
           </Box>
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 2.5, minWidth: 0, height: "100%" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateRows: "1fr 1fr",
+            gap: 2.5,
+            minWidth: 0,
+            height: "100%",
+          }}
+        >
           {/* Recent Orders — stretches to share the column height with Track Order Requests */}
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <SectionHead title="Recent Orders" action={<ViewAll href="/orders" />} />
-            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
-              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 480, height: "100%" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      {["# Order ID", "Customer", "Items", "Amount"].map((h, i) => (
-                        <th key={i} style={{ textAlign: "left", padding: "12px 10px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.recentOrders ?? []).map((o) => (
-                      <tr key={o.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/orders?view=${o.id}`)}>
-                        <td style={{ padding: "11px 10px", fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap" }}>{o.orderNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{o.customer}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum">{o.items} {o.items === 1 ? "item" : "items"}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }} className="tnum font-bold">{rs(o.amount)}</td>
-                      </tr>
-                    ))}
-                    {!(data?.recentOrders ?? []).length && (
-                      <tr>
-                        <td colSpan={4} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
-                          {loading ? (
-                            <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
-                          ) : (
-                            <Box className="flex flex-col items-center gap-1.5">
-                              <Box sx={{ width: 56, height: 56, borderRadius: 2, background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#8d8670" }}>
-                                <InboxOutlined sx={{ fontSize: 28 }} />
-                              </Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#3d3a2c", mt: 0.8 }}>No orders yet.</Typography>
-                              <Typography sx={{ color: "#8d8670", fontSize: 12.5 }}>When customers place orders, they&rsquo;ll appear here.</Typography>
-                            </Box>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </Box>
-            </Card>
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <SectionHead
+              title="Recent Orders"
+              alignCardRow
+              action={<ViewAll href="/orders" />}
+            />
+            <RecentOrderTable
+              items={data?.recentOrders || []}
+              loading={loading}
+            />
           </Box>
 
           {/* Track Order Requests — equal height to Recent Orders */}
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <SectionHead title="Track Order Requests" action={<ViewAll href="/track-orders" />} />
-            <Card sx={{ overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
-              <Box className="overflow-x-auto" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 540, height: "100%" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                      {["Tracking ID", "Order ID", "Customer", "Status", "Last Update"].map((h, i) => (
-                        <th key={i} style={{ textAlign: "left", padding: "12px 10px", fontSize: 12.5, fontWeight: 800, color: "#8d8670", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.trackRequests ?? []).map((t) => (
-                      <tr key={t.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0] cursor-pointer" onClick={() => router.push(`/track-orders?view=${t.id}`)}>
-                        <td style={{ padding: "11px 10px", fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap" }}>{t.trackingNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{t.orderNumber}</td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap" }}>{t.customer}</td>
-                        <td style={{ padding: "11px 10px" }}><StatusChip status={t.status} /></td>
-                        <td style={{ padding: "11px 10px", whiteSpace: "nowrap", color: "#57523f" }}>{fmtDate(t.updatedAt)}</td>
-                      </tr>
-                    ))}
-                    {!(data?.trackRequests ?? []).length && (
-                      <tr>
-                        <td colSpan={5} style={{ padding: "34px 16px", textAlign: "center", verticalAlign: "middle" }}>
-                          {loading ? (
-                            <Typography sx={{ color: "#8d8670", fontSize: 13.5 }}>Loading...</Typography>
-                          ) : (
-                            <Box className="flex flex-col items-center gap-1.5">
-                              <Box sx={{ width: 56, height: 56, borderRadius: 2, background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#8d8670" }}>
-                                <LocationOnOutlined sx={{ fontSize: 28 }} />
-                              </Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#3d3a2c", mt: 0.8 }}>No tracking records yet.</Typography>
-                              <Typography sx={{ color: "#8d8670", fontSize: 12.5 }}>Track order requests from customers here.</Typography>
-                            </Box>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </Box>
-            </Card>
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <SectionHead
+              title="Track Order Requests"
+              action={<ViewAll href="/track-orders" />}
+            />
+            <TrackingRequestTable
+              items={data?.trackRequests || []}
+              loading={loading}
+            />
           </Box>
         </Box>
       </Box>
 
-      {/* Weekly Sales — redesigned to match the shared design */}
-      <Box>
-        <SectionHead
-          title="Weekly Sales"
-          action={
-            <Select
-              value="7"
-              size="small"
-              sx={{ borderRadius: 99, fontSize: 12.5, fontWeight: 700, background: "#fffdf7", "& .MuiSelect-select": { py: 0.8, pr: 3.5 } }}
-              onChange={() => {}}
-            >
-              <MenuItem value="7">Last 7 Days</MenuItem>
-            </Select>
-          }
-        />
-        <Card sx={{ p: { xs: 2, md: 2.5 }, overflow: "hidden" }}>
-          <Box className="flex gap-4" sx={{ flexDirection: { xs: "column", lg: "row" } }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box className="flex items-center gap-2 flex-wrap">
-                <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 26, lineHeight: 1.1 }}>
-                  {rs(salesData.total)}
-                </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: "#2e7d4f", background: "#e9f5ec", px: 1.1, py: 0.4, borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 0.4 }}>
-                  <TrendingUpIcon sx={{ fontSize: 13 }} /> +{salesData.delta}% <span style={{ fontWeight: 600 }}>vs previous week</span>
-                </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5, mt: 0.5 }}>
-                {salesData.orders} order{salesData.orders === 1 ? "" : "s"} · last 7 days
-              </Typography>
-              {/* Stat chips */}
-              <Box className="flex gap-2 flex-wrap" sx={{ mt: 1.5 }}>
-                {[
-                  { icon: <ReceiptOutlined sx={{ fontSize: 16 }} />, value: String(salesData.orders), label: "Orders" },
-                  { icon: <PaymentsOutlined sx={{ fontSize: 16 }} />, value: rs(salesData.total), label: "Revenue" },
-                  { icon: <CalculateOutlined sx={{ fontSize: 16 }} />, value: rs(salesData.orders ? Math.round(salesData.total / salesData.orders) : 0), label: "Avg. Order Value" },
-                  { icon: <PersonAddOutlined sx={{ fontSize: 16 }} />, value: "0", label: "New Customers" },
-                ].map((s, i) => (
-                  <Box key={i} className="flex items-center gap-1.5" sx={{ background: "#fffdf7", border: "1px solid #ece4cb", borderRadius: 2, px: 1.4, py: 1 }}>
-                    <Box sx={{ color: "#2e7d4f" }}>{s.icon}</Box>
-                    <Box>
-                      <Typography sx={{ fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{s.value}</Typography>
-                      <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 10.5 }}>{s.label}</Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <SalesChart points={salesData.points} />
-              </Box>
-            </Box>
-            {/* Top Performing Day */}
-            <Box sx={{ width: { xs: "100%", lg: 210 }, flexShrink: 0 }}>
-              <Box sx={{ background: "#fffdf7", border: "1px solid #ece4cb", borderRadius: 3, p: 2, height: "100%" }}>
-                <Box className="flex items-center gap-1" sx={{ mb: 1.5 }}>
-                  <EmojiEventsOutlined sx={{ fontSize: 18, color: "#b08a2e" }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: 13 }}>Top Performing Day</Typography>
-                </Box>
-                <Box className="flex items-center justify-between">
-                  <IconButton size="small" sx={{ border: "1px solid #ece4cb", background: "#fff" }}>
-                    <ChevronLeftIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <Box sx={{ textAlign: "center" }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: 15 }}>{topDay.label}</Typography>
-                    <Typography variant="body2" sx={{ fontSize: 12.5, mt: 0.3 }}>{rs(topDay.revenue)} in sales</Typography>
-                    <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5 }}>{topDay.orders} order{topDay.orders === 1 ? "" : "s"}</Typography>
-                  </Box>
-                  <IconButton size="small" sx={{ border: "1px solid #ece4cb", background: "#fff" }}>
-                    <ChevronRightIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Card>
-      </Box>
+      <SalesOverview
+        sales={salesData}
+        period={salesPeriod}
+        onPeriodChange={setSalesPeriod}
+      >
+        <SalesChart points={salesData.points} />
+      </SalesOverview>
 
       {/* Product Control Center */}
       <Box>
@@ -741,56 +979,164 @@ export default function DashboardPage() {
           title="Product Control Center"
           caption="Manage your products, stock, pricing and visibility."
           action={
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => router.push("/products?new=1")} sx={{ borderRadius: 99 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => router.push("/products?new=1")}
+              sx={{ borderRadius: 99 }}
+            >
               Add Product
             </Button>
           }
         />
         <Card sx={{ overflow: "hidden" }}>
           <Box className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 640 }}>
+            <table
+              className="w-full text-sm"
+              style={{ borderCollapse: "collapse", minWidth: 640 }}
+            >
               <thead>
                 <tr style={{ borderBottom: "1px solid #ece4cb" }}>
-                  <th style={{ width: 44, padding: "12px 8px 12px 16px" }}><Checkbox size="small" disabled /></th>
-                  {["Product", "Category", "Price", "Stock", "Status", "Featured", "Actions"].map((h, i) => (
-                    <th key={h} style={{ textAlign: i === 6 ? "right" : "left", padding: "12px 12px", paddingRight: i === 6 ? 20 : 12, fontSize: 12.5, fontWeight: 800, color: "#8d8670" }}>{h}</th>
+                  <th style={{ width: 44, padding: "12px 8px 12px 16px" }}>
+                    <Checkbox size="small" disabled />
+                  </th>
+                  {[
+                    "Product",
+                    "Category",
+                    "Price",
+                    "Stock",
+                    "Status",
+                    "Featured",
+                    "Actions",
+                  ].map((h, i) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: i === 6 ? "right" : "left",
+                        padding: "12px 12px",
+                        paddingRight: i === 6 ? 20 : 12,
+                        fontSize: 12.5,
+                        fontWeight: 800,
+                        color: "#8d8670",
+                      }}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {(data?.controlProducts ?? []).map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #f1ebd6" }} className="hover:bg-[#fdfaf0]">
-                    <td style={{ padding: "10px 8px 10px 16px" }}><Checkbox size="small" /></td>
+                  <tr
+                    key={p.id}
+                    style={{ borderBottom: "1px solid #f1ebd6" }}
+                    className="hover:bg-[#fdfaf0]"
+                  >
+                    <td style={{ padding: "10px 8px 10px 16px" }}>
+                      <Checkbox size="small" />
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
                       <Box className="flex items-center gap-3">
                         <Thumb src={p.thumb ?? p.image} alt={p.name} circle />
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 13.5 }}>{p.name}</Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 700, fontSize: 13.5 }}
+                          >
+                            {p.name}
+                          </Typography>
                         </Box>
                       </Box>
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#57523f" }}>{p.name.split(" ")[0]}</td>
-                    <td style={{ padding: "10px 12px" }} className="tnum font-bold">{rs(p.price)}</td>
-                    <td style={{ padding: "10px 12px" }} className="tnum">{p.stock}</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <Switch size="small" checked={p.isActive} onChange={() => toggleControlProduct(p.id, "isActive", !p.isActive)} aria-label="Toggle active" />
+                    <td style={{ padding: "10px 12px", color: "#57523f" }}>
+                      {p.name.split(" ")[0]}
+                    </td>
+                    <td
+                      style={{ padding: "10px 12px" }}
+                      className="tnum font-bold"
+                    >
+                      {rs(p.price)}
+                    </td>
+                    <td style={{ padding: "10px 12px" }} className="tnum">
+                      {p.stock ?? "Not tracked"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      <Switch size="small" checked={p.isFeatured} onChange={() => toggleControlProduct(p.id, "isFeatured", !p.isFeatured)} aria-label="Toggle featured" />
+                      <Switch
+                        size="small"
+                        checked={p.isActive}
+                        onChange={() =>
+                          toggleControlProduct(p.id, "isActive", !p.isActive)
+                        }
+                        aria-label="Toggle active"
+                      />
                     </td>
-                    <td style={{ padding: "10px 20px 10px 12px", textAlign: "right" }}>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Switch
+                        size="small"
+                        checked={p.isFeatured}
+                        onChange={() =>
+                          toggleControlProduct(
+                            p.id,
+                            "isFeatured",
+                            !p.isFeatured,
+                          )
+                        }
+                        aria-label="Toggle featured"
+                      />
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 20px 10px 12px",
+                        textAlign: "right",
+                      }}
+                    >
                       <Box className="inline-flex items-center gap-1.5">
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?view=${p.id}`)} aria-label="View product"><VisibilityOutlined sx={{ fontSize: 17 }} /></Button>
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8 }} onClick={() => router.push(`/products?edit=${p.id}`)} aria-label="Edit product"><EditIcon sx={{ fontSize: 17 }} /></Button>
-                        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0.8, color: "#c0392b" }} onClick={() => router.push(`/products?delete=${p.id}`)} aria-label="Delete product"><DeleteOutline sx={{ fontSize: 17 }} /></Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{ minWidth: 0, p: 0.8 }}
+                          onClick={() => router.push(`/products?view=${p.id}`)}
+                          aria-label="View product"
+                        >
+                          <VisibilityOutlined sx={{ fontSize: 17 }} />
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{ minWidth: 0, p: 0.8 }}
+                          onClick={() => router.push(`/products?edit=${p.id}`)}
+                          aria-label="Edit product"
+                        >
+                          <EditIcon sx={{ fontSize: 17 }} />
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{ minWidth: 0, p: 0.8, color: "#c0392b" }}
+                          onClick={() =>
+                            router.push(`/products?delete=${p.id}`)
+                          }
+                          aria-label="Delete product"
+                        >
+                          <DeleteOutline sx={{ fontSize: 17 }} />
+                        </Button>
                       </Box>
                     </td>
                   </tr>
                 ))}
                 {!(data?.controlProducts ?? []).length && (
                   <tr>
-                    <td colSpan={8} style={{ padding: 32, textAlign: "center", color: "#8d8670" }}>
-                      {loading ? "Loading products..." : "No products yet. Add your first product to get started."}
+                    <td
+                      colSpan={8}
+                      style={{
+                        padding: 32,
+                        textAlign: "center",
+                        color: "#8d8670",
+                      }}
+                    >
+                      {loading
+                        ? "Loading products..."
+                        : "No products yet. Add your first product to get started."}
                     </td>
                   </tr>
                 )}
@@ -804,35 +1150,107 @@ export default function DashboardPage() {
       <Box>
         <Box className="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <Box className="flex items-baseline gap-3">
-            <Typography variant="h5" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: 21 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontFamily: "var(--font-display), Georgia, serif",
+                fontWeight: 700,
+                fontSize: 21,
+              }}
+            >
               Manage App Screens
             </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12.5 }}>
-              Update content for different app screens and keep your app fresh and engaging.
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", fontSize: 12.5 }}
+            >
+              Update content for different app screens and keep your app fresh
+              and engaging.
             </Typography>
           </Box>
         </Box>
-        <Box className="grid gap-4" sx={{ gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(4, 1fr)" } }}>
+        <Box
+          className="grid gap-4"
+          sx={{
+            gridTemplateColumns: {
+              xs: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+              lg: "repeat(4, 1fr)",
+            },
+          }}
+        >
           {MANAGE_SCREENS.map((s) => (
-            <Card key={s.href} sx={{ p: { xs: 1.5, sm: 2 }, display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box className="flex items-start gap-2.5" sx={{ flexDirection: { xs: "column", sm: "row" } }}>
-                <Box sx={{ width: { xs: 36, sm: 42 }, height: { xs: 36, sm: 42 }, borderRadius: "50%", background: "#f7ecd0", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b3a28", flexShrink: 0, "& svg": { fontSize: { xs: 18, sm: 20 } } }}>
+            <Card
+              key={s.href}
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+              }}
+            >
+              <Box
+                className="flex items-start gap-2.5"
+                sx={{ flexDirection: { xs: "column", sm: "row" } }}
+              >
+                <Box
+                  sx={{
+                    width: { xs: 36, sm: 42 },
+                    height: { xs: 36, sm: 42 },
+                    borderRadius: "50%",
+                    background: "#f7ecd0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#1b3a28",
+                    flexShrink: 0,
+                    "& svg": { fontSize: { xs: 18, sm: 20 } },
+                  }}
+                >
                   {s.icon}
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 13.5, lineHeight: 1.25 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 800, fontSize: 13.5, lineHeight: 1.25 }}
+                  >
                     {s.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 11.5, lineHeight: 1.35, display: { xs: "none", sm: "block" }, mt: 0.4 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      fontSize: 11.5,
+                      lineHeight: 1.35,
+                      display: { xs: "none", sm: "block" },
+                      mt: 0.4,
+                    }}
+                  >
                     {s.desc}
                   </Typography>
                 </Box>
               </Box>
-              <Box className="flex items-center gap-1.5 mt-1" sx={{ flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "stretch", sm: "center" } }}>
-                <Button variant="contained" size="small" onClick={() => router.push(s.href)} sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}>
+              <Box
+                className="flex items-center gap-1.5 mt-1"
+                sx={{
+                  flexDirection: { xs: "column", sm: "row" },
+                  alignItems: { xs: "stretch", sm: "center" },
+                }}
+              >
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => router.push(s.href)}
+                  sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}
+                >
                   Edit
                 </Button>
-                <Button variant="outlined" size="small" onClick={() => router.push(`${s.href}?preview=1`)} sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => router.push(`${s.href}?preview=1`)}
+                  sx={{ px: 2.2, py: 0.6, fontSize: 12, borderRadius: 99 }}
+                >
                   View
                 </Button>
               </Box>

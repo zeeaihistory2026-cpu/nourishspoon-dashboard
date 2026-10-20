@@ -30,11 +30,13 @@ export function LiveOrdersProvider({
   useEffect(() => {
     const connectedAt = Date.now();
     const seen = new Set<string>();
+    let stopReceived: (() => void) | undefined;
     let stopCustomers: (() => void) | undefined;
     let stopOrders: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(getFirebaseAuth(), (user) => {
       stopOrders?.();
       stopCustomers?.();
+      stopReceived?.();
       setConnected(false);
       if (!user) return;
       stopCustomers = onSnapshot(
@@ -46,7 +48,31 @@ export function LiveOrdersProvider({
         () => setRevision((value) => value + 1),
         () => {},
       );
-      let initial = true;
+      stopReceived = onSnapshot(
+        query(
+          collection(getFirebaseDatabase(), "orders"),
+          orderBy("created_at", "desc"),
+          limit(30),
+        ),
+        (snapshot) => {
+          if (snapshot.metadata.fromCache) return;
+          const arrived = snapshot.docs.filter(
+            (doc) =>
+              !seen.has(doc.id) &&
+              Date.parse(doc.data().created_at) >= connectedAt,
+          );
+          snapshot.docs.forEach((doc) => seen.add(doc.id));
+          if (arrived.length)
+            setNotice({
+              id: arrived[0].id,
+              number:
+                arrived.length === 1
+                  ? arrived[0].data().order_number || "New order"
+                  : `${arrived.length} new orders`,
+            });
+        },
+        () => {},
+      );
       stopOrders = onSnapshot(
         query(
           collection(getFirebaseDatabase(), "orders"),
@@ -57,20 +83,6 @@ export function LiveOrdersProvider({
         (snapshot) => {
           setConnected(!snapshot.metadata.fromCache);
           setRevision((value) => value + 1);
-          const latest = snapshot.docs[0];
-          if (
-            !initial &&
-            latest &&
-            !seen.has(latest.id) &&
-            Date.parse(latest.data().created_at) >= connectedAt
-          ) {
-            setNotice({
-              id: latest.id,
-              number: latest.data().order_number || "New order",
-            });
-          }
-          if (latest) seen.add(latest.id);
-          initial = false;
         },
         () => {
           setConnected(false);
@@ -81,6 +93,7 @@ export function LiveOrdersProvider({
       stopAuth();
       stopOrders?.();
       stopCustomers?.();
+      stopReceived?.();
     };
   }, []);
   return (

@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
+  IconButton,
   Card,
   Chip,
   CircularProgress,
@@ -81,6 +82,8 @@ function OrderDetail({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [trackingError, setTrackingError] = useState("");
+  const trackingInput = useRef<HTMLInputElement>(null);
 
   const order = data?.item;
 
@@ -100,6 +103,9 @@ function OrderDetail({
     if (trackingNumber.trim() && !/^\d{8,20}$/.test(trackingNumber.trim())) {
       setSaveFailed(true);
       setMsg("Enter an 8–20 digit TCS tracking ID.");
+      setTrackingError("Enter an 8–20 digit TCS tracking ID.");
+      setConfirming(false);
+      trackingInput.current?.focus();
       return;
     }
     if (
@@ -110,11 +116,14 @@ function OrderDetail({
       setConfirming(false);
       setSaveFailed(true);
       setMsg("Add the TCS tracking ID before dispatch or delivery.");
+      setTrackingError("Add the TCS tracking ID before dispatch or delivery.");
+      trackingInput.current?.focus();
       return;
     }
     setBusy(true);
     setMsg(null);
     setSaveFailed(false);
+    setTrackingError("");
     try {
       await api(`/api/admin/orders/${id}`, {
         method: "PATCH",
@@ -149,7 +158,7 @@ function OrderDetail({
     else save();
   }
 
-  if (loading)
+  if (loading && !data)
     return (
       <Box sx={{ py: 8, textAlign: "center" }}>
         <CircularProgress />
@@ -166,21 +175,6 @@ function OrderDetail({
 
   return (
     <Box className="flex flex-col gap-5">
-      {msg && (
-        <Typography
-          role={saveFailed ? "alert" : "status"}
-          variant="body2"
-          sx={{
-            background: saveFailed ? "#fdecea" : "#e7f4ea",
-            color: saveFailed ? "#c0392b" : "#2e7d4f",
-            p: 1.5,
-            borderRadius: 2,
-          }}
-        >
-          {msg}
-        </Typography>
-      )}
-
       <Box className="flex items-start justify-between gap-3 flex-wrap">
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
@@ -445,11 +439,24 @@ function OrderDetail({
           />
           <TextField
             label="Tracking ID / TCS consignment number"
-            slotProps={{ htmlInput: { maxLength: 20, inputMode: "numeric" } }}
+            slotProps={{
+              htmlInput: {
+                maxLength: 20,
+                inputMode: "numeric",
+                ref: trackingInput,
+              },
+            }}
+            error={!!trackingError}
             size="small"
             value={trackingNumber}
-            onChange={(e) => setTrackingNumber(e.target.value)}
-            helperText="8–20 digits. Required before dispatch or marking a TCS order delivered."
+            onChange={(e) => {
+              setTrackingNumber(e.target.value);
+              setTrackingError("");
+            }}
+            helperText={
+              trackingError ||
+              "8–20 digits. Required before dispatch or marking a TCS order delivered."
+            }
           />
         </Box>
         <TextField
@@ -461,6 +468,21 @@ function OrderDetail({
           sx={{ mt: 2 }}
           placeholder="Visible in the order timeline"
         />
+        {msg && (
+          <Typography
+            role={saveFailed ? "alert" : "status"}
+            variant="body2"
+            sx={{
+              mt: 2,
+              background: saveFailed ? "#fdecea" : "#e7f4ea",
+              color: saveFailed ? "#c0392b" : "#2e7d4f",
+              p: 1.5,
+              borderRadius: 2,
+            }}
+          >
+            {msg}
+          </Typography>
+        )}
         <Box className="flex justify-end gap-2 mt-3">
           <Button variant="outlined" onClick={onClose}>
             Close
@@ -710,9 +732,18 @@ function Page() {
                     {fmtDateTime(o.createdAt).split(",")[0]}
                   </td>
                   <td style={{ padding: "11px 12px" }}>
-                    <VisibilityOutlined
-                      sx={{ color: "#b3a983", fontSize: 18 }}
-                    />
+                    <IconButton
+                      size="small"
+                      aria-label={`View order ${o.orderNumber || o.id}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewId(o.id);
+                      }}
+                    >
+                      <VisibilityOutlined
+                        sx={{ color: "#687854", fontSize: 18 }}
+                      />
+                    </IconButton>
                   </td>
                 </tr>
               ))}

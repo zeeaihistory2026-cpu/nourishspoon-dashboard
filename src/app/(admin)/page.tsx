@@ -39,6 +39,7 @@ import { useApi, api } from "@/lib/api";
 import { rs, num, pad2 } from "@/lib/format";
 import { Thumb, ErrorState } from "@/components/ui";
 import { DashboardHero } from "@/components/DashboardHero";
+import { DashboardLoading } from "@/components/DashboardLoading";
 import { SalesOverview, type SalesPeriod } from "@/components/SalesOverview";
 import {
   RecentOrderTable,
@@ -621,6 +622,7 @@ export default function DashboardPage() {
       /classic panjeeri/i.test(product.name),
     ) || data?.controlProducts[0];
   if (error) return <ErrorState message={error} onRetry={refresh} />;
+  if (loading && !data) return <DashboardLoading />;
 
   return (
     <Box className="flex flex-col gap-5">

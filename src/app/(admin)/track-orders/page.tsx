@@ -18,6 +18,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  IconButton,
   Card,
   CircularProgress,
   Divider,
@@ -97,7 +98,7 @@ function TrackDetail({
     }
   }
 
-  if (loading)
+  if (loading && !data)
     return (
       <Box sx={{ py: 8, textAlign: "center" }}>
         <CircularProgress />
@@ -522,9 +523,18 @@ function Page() {
                     {fmtDateTime(t.updatedAt).split(",")[0]}
                   </td>
                   <td style={{ padding: "11px 12px" }}>
-                    <VisibilityOutlined
-                      sx={{ color: "#b3a983", fontSize: 18 }}
-                    />
+                    <IconButton
+                      size="small"
+                      aria-label={`View tracking ${t.trackingNumber || t.orderNumber}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewId(t.id);
+                      }}
+                    >
+                      <VisibilityOutlined
+                        sx={{ color: "#687854", fontSize: 18 }}
+                      />
+                    </IconButton>
                   </td>
                 </tr>
               ))}

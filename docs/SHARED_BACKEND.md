@@ -39,3 +39,5 @@ Tracking numbers are stored on the canonical order document as tracking_number. 
 The dashboard bell reads recent orders and maintains a monotonic read-through cursor per administrator in adminOrderInbox. New order receipts appear as a live toast and refresh order lists, tracking and sales. Existing customer inbox and native push flows remain separate.
 
 Sales supports the last seven days and the current calendar month to date in Asia/Karachi. Monthly comparison uses the same elapsed days of the previous month. Revenue counts paid, delivered orders; pending orders remain visible in order counts and Recent Orders. Metrics retain the documented 2,000-order reporting bound.
+
+The existing info@nourishspoon.com owner also retains its explicitly provisioned server-issued Firebase admin claim. This exception does not grant or elevate delegated users.

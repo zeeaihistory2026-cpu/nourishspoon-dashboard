@@ -9,3 +9,5 @@
 7. Use the documented customer API and tested Firestore rules; see SHARED_BACKEND.md. Firebase billing settings are unchanged.
 
 For local QA only, use project demo-nourish-spoon with the local Auth/Firestore emulators. Set both server emulator variables and NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST to local loopback addresses. Never put emulator settings in the production deployment.
+
+The existing info@nourishspoon.com owner also retains its explicitly provisioned server-issued Firebase admin claim. This exception does not grant or elevate delegated users.

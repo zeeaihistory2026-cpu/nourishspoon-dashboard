@@ -24,8 +24,11 @@ export function allowedAdmin(account: {
   email_verified?: boolean;
 }) {
   return (
-    account.email_verified === true &&
-    adminAllowlist().includes((account.email ?? "").toLowerCase())
+    // This owner was explicitly provisioned with a server-issued Firebase claim.
+    (account.admin === true &&
+      account.email?.toLowerCase() === "info@nourishspoon.com") ||
+    (account.email_verified === true &&
+      adminAllowlist().includes((account.email ?? "").toLowerCase()))
   );
 }
 export async function dashboardAccess(

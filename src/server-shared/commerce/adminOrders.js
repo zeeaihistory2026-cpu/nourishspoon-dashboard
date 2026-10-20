@@ -76,14 +76,6 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
         throw new Error(
           "Confirm the delivery fee before confirming the order.",
         );
-      if (
-        ["out_for_delivery", "delivered"].includes(
-          patch.status || order.status,
-        ) &&
-        order.delivery_method_code === "tcs_nationwide" &&
-        !(patch.tracking_number || order.tracking_number)
-      )
-        throw new Error("Enter the TCS number before dispatch.");
       const settleRewards = await loyalty.settlement(tx, ref.id, order, patch);
       if (patch.status === "cancelled") {
         const productIds = [

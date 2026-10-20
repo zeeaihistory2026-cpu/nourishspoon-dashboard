@@ -68,7 +68,7 @@ function TrackDetail({
 
   async function save(target = nextMilestone) {
     if (!rec) return;
-    if (!/^\d{8,20}$/.test(trackingNumber.trim())) {
+    if (trackingNumber.trim() && !/^\d{8,20}$/.test(trackingNumber.trim())) {
       setFailed(true);
       setMsg("Enter an 8–20 digit TCS tracking ID.");
       return;
@@ -81,7 +81,9 @@ function TrackDetail({
       await api(`/api/admin/tracking/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          trackingNumber: trackingNumber.trim(),
+          ...(trackingNumber.trim()
+            ? { trackingNumber: trackingNumber.trim() }
+            : {}),
           ...(milestone ? { milestone } : {}),
         }),
       });
@@ -158,6 +160,7 @@ function TrackDetail({
           size="small"
           fullWidth
           label="Tracking ID / TCS consignment number"
+          helperText="Optional. Add an 8–20 digit tracking ID now or later."
           value={trackingNumber}
           onChange={(e) => setTrackingNumber(e.target.value)}
         />
@@ -192,7 +195,12 @@ function TrackDetail({
         </Button>
         <Button
           variant="contained"
-          disabled={busy || !trackingNumber.trim()}
+          disabled={
+            busy ||
+            (!nextMilestone &&
+              (!trackingNumber.trim() ||
+                trackingNumber.trim() === (rec.trackingNumber ?? "")))
+          }
           onClick={() =>
             nextMilestone === "delivered" ? setConfirming(true) : void save()
           }

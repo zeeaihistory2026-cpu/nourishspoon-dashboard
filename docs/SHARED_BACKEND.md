@@ -15,7 +15,7 @@ Canonical collections and fields:
 - `users/{uid}/notifications`: inbox notices written atomically with order creation and status updates.
 - `reviews`: pending moderation, linked to the customer's delivered order.
 
-Order statuses: pending -> confirmed -> preparing -> out_for_delivery -> delivered. Cancellation is allowed before completion. TCS dispatch requires a consignment number. Legacy pending delivery quotes are resolved by the shared delivery policy when confirmed.
+Order statuses: pending -> confirmed -> preparing -> out_for_delivery -> delivered. Cancellation is allowed before completion. Tracking is optional for dispatch and delivery and can be added later. Legacy pending delivery quotes are resolved by the shared delivery policy when confirmed.
 
 `GET /api/health` verifies a database read and returns the public project ID and commerce readiness. It returns 503 when server credentials are missing or invalid. Check it before activating the app's commerce flag. Native apps do not use dashboard cookies. Browser storefronts require an explicit `SHOP_WEB_ORIGINS` allowlist.
 
@@ -34,7 +34,7 @@ Deploy Vercel functions in `bom1` alongside the existing `asia-south1` Firestore
 
 ## Order fulfilment and dashboard alerts
 
-Tracking numbers are stored on the canonical order document as tracking_number. The tracking form selects an order by customer-facing number/customer name; the API also accepts that number. Canonical stages are pending, confirmed, preparing, out_for_delivery and delivered. Any forward stage is allowed; completed and cancelled orders cannot be reopened. TCS dispatch/delivery requires an 8–20 digit consignment number. Payment verification and reward settlement remain separate, transactional and idempotent.
+Tracking numbers are stored on the canonical order document as tracking_number. The tracking form selects an order by customer-facing number/customer name; the API also accepts that number. Canonical stages are pending, confirmed, preparing, out_for_delivery and delivered. Any forward stage is allowed; completed and cancelled orders cannot be reopened. TCS tracking is optional for dispatch and delivery, including when marking an order delivered directly. An 8–20 digit consignment number can be added later without reopening the order. Supplied tracking numbers are validated. Payment verification and reward settlement remain separate, transactional and idempotent.
 
 The dashboard bell reads recent orders and maintains a monotonic read-through cursor per administrator in adminOrderInbox. New order receipts appear as a live toast and refresh order lists, tracking and sales. Existing customer inbox and native push flows remain separate.
 

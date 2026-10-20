@@ -108,18 +108,6 @@ function OrderDetail({
       trackingInput.current?.focus();
       return;
     }
-    if (
-      ["out_for_delivery", "delivered"].includes(targetStatus) &&
-      order.deliveryMethod === "tcs_nationwide" &&
-      !trackingNumber.trim()
-    ) {
-      setConfirming(false);
-      setSaveFailed(true);
-      setMsg("Add the TCS tracking ID before dispatch or delivery.");
-      setTrackingError("Add the TCS tracking ID before dispatch or delivery.");
-      trackingInput.current?.focus();
-      return;
-    }
     setBusy(true);
     setMsg(null);
     setSaveFailed(false);
@@ -376,8 +364,8 @@ function OrderDetail({
           </Box>
         )}
         <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-          Add the tracking ID before TCS dispatch. Delivery and payment changes
-          are saved to the customer’s live order.
+          Tracking is optional and can be added later. Delivery and payment
+          changes are saved to the customer’s live order.
         </Typography>
         <Box className="grid grid-cols-2 gap-3">
           <FormControl size="small" fullWidth>
@@ -455,7 +443,7 @@ function OrderDetail({
             }}
             helperText={
               trackingError ||
-              "8–20 digits. Required before dispatch or marking a TCS order delivered."
+              "Optional. Add an 8–20 digit TCS tracking ID now or later."
             }
           />
         </Box>

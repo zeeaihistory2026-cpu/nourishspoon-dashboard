@@ -8,7 +8,7 @@ export async function GET() {
       {
         status: "ok",
         commerce: true,
-        schemaVersion: "commerce-2026-10-20-fulfilment",
+        schemaVersion: "commerce-2026-10-21-receipts-revenue",
         projectId:
           process.env.FIREBASE_PROJECT_ID ||
           process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

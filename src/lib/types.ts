@@ -100,6 +100,7 @@ export interface Order {
   total: number | null;
   paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash";
   paymentStatus: "awaiting_payment" | "submitted" | "paid" | "refunded";
+  paidAt?: ISODate | null;
   orderStatus: OrderStatus;
   shippingAddress: {
     label: string;

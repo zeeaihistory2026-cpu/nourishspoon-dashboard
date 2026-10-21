@@ -38,6 +38,8 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
         )
           throw new Error("Invalid payment status.");
         patch.payment_status = input.payment_status;
+        // Record receipt of money independently of fulfilment and later edits.
+        if (input.payment_status === "paid") patch.paid_at = patch.updated_at;
       }
       const deliveryFee =
         input.delivery_fee ??

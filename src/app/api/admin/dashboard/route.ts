@@ -3,6 +3,8 @@ import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
 import { productView, iso } from "@/lib/contracts";
 import { recentOrders } from "@/lib/orders-data";
 import { rules } from "@/lib/rewards-server";
+import { salesReport } from "@/lib/sales";
+import { orderView } from "@/lib/contracts";
 
 const delta = (current: number, previous: number) =>
   previous
@@ -14,15 +16,18 @@ export async function GET() {
   try {
     await requireAdmin();
     const db = adminDb();
-    const [catalog, loaded, offers] = await Promise.all([
+    const [catalog, loaded, offers, accountingOrders] = await Promise.all([
       db.collection("products").limit(1000).get(),
-      recentOrders(2000),
+      recentOrders(5),
       db.collection("promoCodes").limit(1000).get(),
+      db.collection("orders").select("total", "payment_status", "paymentStatus", "paid_at", "quote_pending", "created_at", "createdAt", "status", "orderStatus", "tracking_number", "order_number", "customer_name", "updated_at").get(),
     ]);
     const products = catalog.docs
       .map((doc) => productView(doc.id, doc.data()))
       .filter((item) => item.isActive);
-    const orders = loaded.map((row) => row.item);
+    const orders = accountingOrders.docs.map(doc => orderView(doc.id, doc.data()));
+    const report = salesReport(accountingOrders.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    const recent = loaded.map(row => row.item);
     const today = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Karachi",
       year: "numeric",
@@ -46,12 +51,6 @@ export async function GET() {
         time(order.createdAt) >= lastStart &&
         time(order.createdAt) < monthStart,
     );
-    const paid = (order: (typeof orders)[number]) =>
-      order.orderStatus === "delivered" && order.paymentStatus === "paid";
-    const revenue = (items: typeof orders) =>
-      items
-        .filter(paid)
-        .reduce((total, order) => total + (order.total || 0), 0);
     const pending = orders.filter((order) => order.orderStatus === "pending");
     const allOffers = offers.docs.map((doc) => doc.data());
     if (!offers.docs.some((doc) => doc.id === "PROMO10"))
@@ -60,32 +59,7 @@ export async function GET() {
       (item) =>
         item.active && (!item.expires_at || time(item.expires_at) > Date.now()),
     ).length;
-    const dailySales = (from: number, days: number, weekly = false) =>
-      Array.from({ length: days }, (_, index) => {
-        const at = from + index * 86400000;
-        const items = orders.filter(
-          (order) =>
-            time(order.createdAt) >= at &&
-            time(order.createdAt) < at + 86400000,
-        );
-        return {
-          date: new Date(at + 5 * 3600000).toISOString().slice(0, 10),
-          label: new Intl.DateTimeFormat("en", {
-            ...(weekly
-              ? { weekday: "short" as const }
-              : { day: "numeric" as const, month: "short" as const }),
-            timeZone: "Asia/Karachi",
-          }).format(at),
-          revenue: revenue(items),
-          orders: items.length,
-        };
-      });
-    const weeklySales = dailySales(dayStart - 6 * 86400000, 7, true);
-    const monthlySales = dailySales(monthStart, number("day"));
-    const previousMonthEnd = Math.min(
-      monthStart,
-      lastStart + number("day") * 86400000,
-    );
+    const weeklySales = report.weekly.points;
     return Response.json({
       stats: {
         totalProducts: products.length,
@@ -109,12 +83,12 @@ export async function GET() {
         ),
         totalOrders: orders.length,
         ordersDelta: delta(thisMonth.length, lastMonth.length),
-        revenue: revenue(orders),
-        revenueDelta: delta(revenue(thisMonth), revenue(lastMonth)),
+        revenue: report.revenue,
+        revenueDelta: report.revenueDelta,
         activeOffers,
         offersDelta: 0,
       },
-      recentOrders: orders.slice(0, 5).map((order) => ({
+      recentOrders: recent.map((order) => ({
         id: order.id,
         orderNumber: order.orderNumber,
         customer: order.customerName,
@@ -124,44 +98,11 @@ export async function GET() {
         date: order.createdAt,
       })),
       weeklySales,
-      sales: {
-        weekly: {
-          total: weeklySales.reduce((sum, day) => sum + day.revenue, 0),
-          orders: weeklySales.reduce((sum, day) => sum + day.orders, 0),
-          delta: delta(
-            weeklySales.reduce((sum, day) => sum + day.revenue, 0),
-            revenue(
-              orders.filter(
-                (order) =>
-                  time(order.createdAt) >= dayStart - 13 * 86400000 &&
-                  time(order.createdAt) < dayStart - 6 * 86400000,
-              ),
-            ),
-          ),
-          prevLabel: "vs previous week",
-          rangeLabel: "last 7 days",
-          points: weeklySales,
-        },
-        monthly: {
-          total: monthlySales.reduce((sum, day) => sum + day.revenue, 0),
-          orders: monthlySales.reduce((sum, day) => sum + day.orders, 0),
-          delta: delta(
-            monthlySales.reduce((sum, day) => sum + day.revenue, 0),
-            revenue(
-              orders.filter(
-                (order) =>
-                  time(order.createdAt) >= lastStart &&
-                  time(order.createdAt) < previousMonthEnd,
-              ),
-            ),
-          ),
-          prevLabel: "vs previous month to date",
-          rangeLabel: "month to date",
-          points: monthlySales,
-        },
-      },
+      sales: { weekly: { ...report.weekly, payments: undefined }, monthly: { ...report.monthly, payments: undefined } },
+      accounting: report.accounting,
       trackRequests: orders
         .filter((order) => order.trackingNumber)
+        .sort((a, b) => time(b.updatedAt) - time(a.updatedAt))
         .slice(0, 5)
         .map((order) => ({
           id: order.id,
@@ -185,9 +126,9 @@ export async function GET() {
             product.images[0] || "/assets/products/sq-panjeeri-bowl-v2.jpg",
         })),
       scope: {
-        ordersLimit: 2000,
+        ordersLimit: null,
         productsLimit: 1000,
-        truncated: loaded.length === 2000 || catalog.size === 1000,
+        truncated: catalog.size === 1000,
       },
     });
   } catch (error) {

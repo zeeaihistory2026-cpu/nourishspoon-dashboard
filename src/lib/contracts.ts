@@ -219,6 +219,7 @@ export function orderView(id: string, raw: Data) {
       (raw.paymentStatus === "pending"
         ? "awaiting_payment"
         : raw.paymentStatus),
+    paidAt: iso(raw.paid_at),
     paymentMethod: raw.payment_method_code ?? raw.paymentMethod ?? "",
     deliveryMethod: raw.delivery_method_code ?? "",
     trackingNumber: raw.tracking_number ?? "",

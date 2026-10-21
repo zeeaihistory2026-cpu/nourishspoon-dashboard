@@ -11,6 +11,7 @@ import {
   Checkbox,
   Switch,
   Typography,
+  Alert,
 } from "@mui/material";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import ShoppingCartOutlined from "@mui/icons-material/ShoppingCartOutlined";
@@ -48,6 +49,7 @@ import {
 import type { DashboardStats } from "@/lib/types";
 
 interface DashboardData {
+  accounting?: { invalidPaidOrders: number };
   stats: DashboardStats;
   recentOrders: {
     id: string;
@@ -718,7 +720,7 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={<AccountBalanceWalletOutlined />}
-          label="Revenue"
+          label="Revenue Received"
           value={loading ? "…" : rs(stats.revenue)}
           delta={stats.revenueDelta}
           caption="vs last month"
@@ -974,6 +976,9 @@ export default function DashboardPage() {
       >
         <SalesChart points={salesData.points} />
       </SalesOverview>
+      {!!data?.accounting?.invalidPaidOrders && (
+        <Alert severity="warning">{data.accounting.invalidPaidOrders} paid order(s) have an unconfirmed or invalid final amount. Verify them in Orders; they are excluded from revenue.</Alert>
+      )}
 
       {/* Product Control Center */}
       <Box>

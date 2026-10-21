@@ -1,6 +1,7 @@
 "use client";
 
-import { Box, Card, Chip, MenuItem, Select, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, Chip, MenuItem, Select, Typography } from "@mui/material";
+import { useState } from "react";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownOutlined from "@mui/icons-material/TrendingDownOutlined";
 import { rs } from "@/lib/format";
@@ -24,6 +25,25 @@ export function SalesOverview({
   onPeriodChange: (period: SalesPeriod) => void;
   children: React.ReactNode;
 }) {
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState("");
+  async function download() {
+    if (downloading) return;
+    setDownloading(true); setError("");
+    try {
+      const response = await fetch(`/api/admin/revenue-report?period=${period}`, { credentials: "include", cache: "no-store" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Unable to download the report. Please retry.");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url; link.download = `Nourish-Spoon-${period}-revenue.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { setError(error instanceof Error ? error.message : "Unable to download the report."); }
+    finally { setDownloading(false); }
+  }
   return (
     <Card
       sx={{
@@ -44,6 +64,10 @@ export function SalesOverview({
         >
           {period === "weekly" ? "Weekly Sales" : "Monthly Sales"}
         </Typography>
+        <Button onClick={download} disabled={downloading} size="small" variant="outlined" sx={{ mb: 1.2 }}>
+          {downloading ? "Preparing PDF…" : `Download ${period === "weekly" ? "Weekly" : "Monthly"} PDF`}
+        </Button>
+        {!!error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
         <Box
           sx={{
             display: "grid",
@@ -103,7 +127,7 @@ export function SalesOverview({
               }}
             />
             <Typography sx={{ color: "text.secondary", fontSize: 10, mt: 1 }}>
-              {sales.orders} orders ·{" "}
+              {sales.orders} paid orders ·{" "}
               {period === "weekly" ? "Last 7 days" : "Month to date"}
             </Typography>
             <Typography sx={{ color: "text.secondary", fontSize: 10 }}>
@@ -115,7 +139,8 @@ export function SalesOverview({
           <Box sx={{ minWidth: 0 }}>{children}</Box>
         </Box>
         <Typography sx={{ color: "text.secondary", fontSize: 10, mt: 1 }}>
-          Revenue includes paid, delivered orders.
+          Money received from Paid orders, after discounts and including delivery.
+          Refunded payments are excluded. Older orders without a payment date use their order date.
         </Typography>
       </Box>
       <Box

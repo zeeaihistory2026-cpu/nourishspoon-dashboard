@@ -7,6 +7,10 @@ const root = existsSync(path.resolve(process.cwd(), "../../functions/src"))
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: root,
+  outputFileTracingIncludes: {
+    "/api/shop/*": ["./public/assets/brand/logo-transparent.png"],
+    "/api/admin/revenue-report": ["./public/assets/brand/logo-transparent.png"],
+  },
   /* config options here */
   // Cache Components is off: every page sits behind the admin auth gate and
   // reads live Firestore data per request, so static prerendering buys

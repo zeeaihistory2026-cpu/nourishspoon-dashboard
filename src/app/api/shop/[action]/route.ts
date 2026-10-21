@@ -6,6 +6,7 @@ import { customerAction } from "@/lib/customer-commerce";
 export const runtime = "nodejs";
 const actions = new Set([
   "placeOrder",
+  "getReceipt",
   "quoteOrder",
   "getRewards",
   "applyReferral",
@@ -90,6 +91,7 @@ export async function POST(
       if (
         error instanceof Error &&
         !("code" in error) &&
+        !(error instanceof AuthError) &&
         !(error instanceof FirebaseConfigurationError)
       )
         throw new AuthError(400, error.message);

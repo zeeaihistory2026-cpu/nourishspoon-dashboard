@@ -29,6 +29,7 @@ export type Purchase = {
   delivery_method_code: string;
   payment_method_code: string;
   payment_status: "awaiting_payment" | "submitted" | "paid" | "refunded";
+  paid_at?: string;
   status:
     | "pending"
     | "confirmed"

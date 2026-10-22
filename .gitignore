@@ -5,7 +5,13 @@ build/
 .vercel/
 *.tsbuildinfo
 *.log
+*.apk
+*.aab
+*.apks
+*.ipa
 .env*
 !.env.example
 *.pem
+*.jks
+*.keystore
 .DS_Store

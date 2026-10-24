@@ -20,6 +20,7 @@ export type PurchaseItem = CartLine & {
 export type Purchase = {
   id: string;
   order_number: string;
+  source?: "app" | "whatsapp_app" | "whatsapp_manual";
   customer_uid: string;
   customer_name: string;
   customer_phone: string;

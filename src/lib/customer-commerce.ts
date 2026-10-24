@@ -17,15 +17,21 @@ export async function customerAction(
   const db = adminDb();
   if (action === "getReceipt") {
     const id = typeof data.order_id === "string" ? data.order_id.trim() : "";
-    if (!id || id.includes("/") || id.length > 80) throw new AuthError(400, "Choose a valid order.");
+    if (!id || id.includes("/") || id.length > 80)
+      throw new AuthError(400, "Choose a valid order.");
     const snapshot = await db.collection("orders").doc(id).get();
     if (!snapshot.exists || snapshot.data()!.customer_uid !== token.uid)
       throw new AuthError(404, "This order is unavailable for your account.");
     const order = { ...snapshot.data()!, id };
     const { receiptPdf } = await import("./pdf-documents");
     const bytes = await receiptPdf(order);
-    const reference = String(snapshot.data()!.order_number || id).replace(/[^a-zA-Z0-9-]/g, "-").slice(0, 60);
-    return { filename: `Nourish-Spoon-${reference}-receipt.pdf`, base64: Buffer.from(bytes).toString("base64") };
+    const reference = String(snapshot.data()!.order_number || id)
+      .replace(/[^a-zA-Z0-9-]/g, "-")
+      .slice(0, 60);
+    return {
+      filename: `Nourish-Spoon-${reference}-receipt.pdf`,
+      base64: Buffer.from(bytes).toString("base64"),
+    };
   }
   const signedIn = () => token.uid;
   const owner = () => {
@@ -38,11 +44,15 @@ export async function customerAction(
     owner,
   });
   const request = { data, auth: { uid: token.uid, token } };
-  if (action === "placeOrder")
-    return createOrderPlacer({ db, loyalty, normalizeProduct })(data, {
-      uid: token.uid,
-      email: token.email || "",
-    });
+  if (action === "placeOrder" || action === "placeWhatsAppOrder")
+    return createOrderPlacer({ db, loyalty, normalizeProduct })(
+      data,
+      {
+        uid: token.uid,
+        email: token.email || "",
+      },
+      { source: action === "placeWhatsAppOrder" ? "whatsapp_app" : "app" },
+    );
   if (action === "quoteOrder") return loyalty.quoteOrder(request);
   if (action === "getRewards") return loyalty.getRewards(request);
   if (action === "applyReferral") return loyalty.applyReferral(request);

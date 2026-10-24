@@ -86,6 +86,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  source?: "app" | "whatsapp_app" | "whatsapp_manual";
   userId: string;
   customerName?: string;
   customerEmail?: string;
@@ -98,7 +99,7 @@ export interface Order {
   quotePending: boolean;
   discount?: number;
   total: number | null;
-  paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash";
+  paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash" | "to_confirm";
   paymentStatus: "awaiting_payment" | "submitted" | "paid" | "refunded";
   paidAt?: ISODate | null;
   orderStatus: OrderStatus;
@@ -181,7 +182,11 @@ export interface WishlistItem {
 }
 
 export type ReviewVisibility =
-  "pending" | "visible" | "hidden" | "featured" | "removed";
+  | "pending"
+  | "visible"
+  | "hidden"
+  | "featured"
+  | "removed";
 
 export interface Review {
   id: string;

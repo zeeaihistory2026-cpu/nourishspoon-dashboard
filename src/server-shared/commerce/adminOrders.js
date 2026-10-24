@@ -12,6 +12,22 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
       if (!snapshot.exists) throw new Error("Order not found.");
       const order = snapshot.data(),
         patch = { updated_at: new Date().toISOString() };
+      if (input.payment_method !== undefined) {
+        if (
+          !["bank_transfer", "easypaisa", "jazzcash", "to_confirm"].includes(
+            input.payment_method,
+          )
+        )
+          throw new Error("Choose a valid payment method.");
+        if (
+          order.payment_status === "paid" &&
+          input.payment_method !== order.payment_method_code
+        )
+          throw new Error(
+            "The method of a verified payment cannot be changed.",
+          );
+        patch.payment_method_code = input.payment_method;
+      }
       if (input.status && input.status !== order.status) {
         domain.statusChange(order.status, input.status);
         patch.status = input.status;
@@ -78,7 +94,18 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
         throw new Error(
           "Confirm the delivery fee before confirming the order.",
         );
-      const settleRewards = await loyalty.settlement(tx, ref.id, order, patch);
+      if (
+        patch.payment_status === "paid" &&
+        ((patch.quote_pending ?? order.quote_pending) ||
+          (patch.payment_method_code ?? order.payment_method_code) ===
+            "to_confirm")
+      )
+        throw new Error(
+          "Confirm the delivery fee and payment method before verifying payment.",
+        );
+      const settleRewards = order.customer_uid
+        ? await loyalty.settlement(tx, ref.id, order, patch)
+        : () => {};
       if (patch.status === "cancelled") {
         const productIds = [
           ...new Set(order.items.map((item) => item.product_id)),
@@ -114,10 +141,12 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
       settleRewards();
       if (actor?.uid) patch.updated_by = actor.uid;
       if (
-        patch.status ||
-        patch.payment_status ||
-        patch.tracking_number !== undefined ||
-        patch.total !== undefined
+        order.customer_uid &&
+        (patch.status ||
+          patch.payment_status ||
+          patch.payment_method_code ||
+          patch.tracking_number !== undefined ||
+          patch.total !== undefined)
       ) {
         const after = { ...order, ...patch };
         const noticeId = ref.collection("events").doc().id;

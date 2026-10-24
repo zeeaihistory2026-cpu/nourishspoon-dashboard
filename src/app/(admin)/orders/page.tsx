@@ -38,6 +38,7 @@ import {
 } from "@/lib/fulfilment";
 import { rs, fmtDateTime } from "@/lib/format";
 import type { Order, OrderEvent } from "@/lib/types";
+import { WhatsAppOrderForm } from "@/components/WhatsAppOrderForm";
 
 const STATUSES = [
   { value: "", label: "All" },
@@ -75,6 +76,7 @@ function OrderDetail({
   }>(`/api/admin/orders/${id}`, true);
   const [newStatus, setNewStatus] = useState("");
   const [newPayment, setNewPayment] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [note, setNote] = useState("");
@@ -91,6 +93,7 @@ function OrderDetail({
     if (order) {
       setNewStatus(order.orderStatus);
       setNewPayment(order.paymentStatus);
+      setPaymentMethod(order.paymentMethod);
       setDeliveryFee(
         order.deliveryFee == null ? "" : String(order.deliveryFee),
       );
@@ -118,6 +121,7 @@ function OrderDetail({
         body: JSON.stringify({
           orderStatus: targetStatus,
           paymentStatus: newPayment || undefined,
+          ...(paymentMethod !== order.paymentMethod ? { paymentMethod } : {}),
           note: note || undefined,
           ...(deliveryFee !== "" && Number(deliveryFee) !== order.deliveryFee
             ? { deliveryFee: Number(deliveryFee) }
@@ -168,6 +172,29 @@ function OrderDetail({
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
             {order.orderNumber || order.id}
           </Typography>
+          {order.source?.startsWith("whatsapp") && (
+            <Chip
+              size="small"
+              label={
+                order.source === "whatsapp_manual"
+                  ? "WhatsApp · Entered by team"
+                  : "WhatsApp · From app"
+              }
+              sx={{ mt: 1 }}
+            />
+          )}
+          {order.source?.startsWith("whatsapp") &&
+            order.orderStatus === "pending" && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Awaiting confirmation. Confirm the WhatsApp conversation and
+                delivery charges before accepting this request.
+              </Typography>
+            )}
+          {order.source === "whatsapp_manual" && (
+            <Typography variant="body2" color="text.secondary">
+              Tracked in dashboard. No verified app account is linked.
+            </Typography>
+          )}
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {order.customerName || data.customer?.fullName || "Customer"} ·{" "}
             {fmtDateTime(order.createdAt)}
@@ -334,6 +361,20 @@ function OrderDetail({
         <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5 }}>
           Update order
         </Typography>
+        <TextField
+          select
+          fullWidth
+          label="Payment method"
+          value={paymentMethod}
+          disabled={busy || order.paymentStatus === "paid"}
+          onChange={(event) => setPaymentMethod(event.target.value)}
+          sx={{ mb: 2 }}
+        >
+          <MenuItem value="to_confirm">To be confirmed on WhatsApp</MenuItem>
+          <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+          <MenuItem value="easypaisa">Easypaisa</MenuItem>
+          <MenuItem value="jazzcash">JazzCash</MenuItem>
+        </TextField>
         {!terminal && (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
             {nextAction && (
@@ -365,7 +406,10 @@ function OrderDetail({
         )}
         <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
           Tracking is optional and can be added later. Delivery and payment
-          changes are saved to the customer’s live order.
+          changes are saved to this order
+          {order.userId
+            ? " and appear in the customer’s app."
+            : ". Share updates with this customer on WhatsApp."}
         </Typography>
         <Box className="grid grid-cols-2 gap-3">
           <FormControl size="small" fullWidth>
@@ -481,6 +525,7 @@ function OrderDetail({
               busy ||
               (newStatus === order.orderStatus &&
                 newPayment === order.paymentStatus &&
+                paymentMethod === order.paymentMethod &&
                 !note &&
                 trackingNumber === order.trackingNumber &&
                 (deliveryFee === "" ||
@@ -552,6 +597,7 @@ function Page() {
   const statusFromUrl = searchParams.get("status") || "";
   const [status, setStatus] = useState(statusFromUrl);
   const [viewId, setViewId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const path = `/api/admin/orders?limit=300${status ? `&status=${status}` : ""}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`;
   const { data, loading, error, refresh } = useApi<{
@@ -588,7 +634,25 @@ function Page() {
 
   return (
     <Box>
-      <PageHeader title="Orders" subtitle="View and manage customer orders." />
+      <PageHeader
+        title="Orders"
+        subtitle="View and manage customer orders."
+        action={
+          <Button variant="contained" onClick={() => setCreating(true)}>
+            Add WhatsApp Order
+          </Button>
+        }
+      />
+      {creating && (
+        <WhatsAppOrderForm
+          onClose={() => setCreating(false)}
+          onCreated={(order) => {
+            setCreating(false);
+            setViewId(order.id);
+            void refresh();
+          }}
+        />
+      )}
 
       <Box className="flex flex-wrap gap-2 mb-3">
         {STATUSES.map((s) => (
@@ -691,6 +755,18 @@ function Page() {
                     }}
                   >
                     {o.orderNumber || o.id.slice(0, 8).toUpperCase()}
+                    {o.source?.startsWith("whatsapp") && (
+                      <Typography
+                        variant="caption"
+                        sx={{ display: "block" }}
+                        color="text.secondary"
+                      >
+                        WhatsApp
+                        {o.source === "whatsapp_manual"
+                          ? " · Manual"
+                          : " · App"}
+                      </Typography>
+                    )}
                   </td>
                   <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
                     {o.customerName || "Customer"}
@@ -702,7 +778,7 @@ function Page() {
                     style={{ padding: "11px 12px", whiteSpace: "nowrap" }}
                     className="tnum font-bold"
                   >
-                    {rs(o.total)}
+                    {o.quotePending ? "Awaiting quote" : rs(o.total)}
                   </td>
                   <td style={{ padding: "11px 12px" }}>
                     <StatusChip status={o.paymentStatus} />

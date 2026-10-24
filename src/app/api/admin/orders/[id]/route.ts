@@ -19,6 +19,9 @@ import { updateOrderRecord } from "@/lib/commerce-server";
 const schema = z.object({
   orderStatus: z.enum(orderStates).optional(),
   paymentStatus: z.enum(paymentStates).optional(),
+  paymentMethod: z
+    .enum(["bank_transfer", "easypaisa", "jazzcash", "to_confirm"])
+    .optional(),
   deliveryFee: z.number().int().min(0).max(10000).optional(),
   trackingNumber: z.string().max(20).optional(),
   note: z.string().max(500).optional(),
@@ -73,6 +76,9 @@ export async function PATCH(
         id,
         status: input.orderStatus,
         payment_status: input.paymentStatus,
+        ...(input.paymentMethod !== undefined
+          ? { payment_method: input.paymentMethod }
+          : {}),
         ...(input.deliveryFee !== undefined
           ? { delivery_fee: input.deliveryFee }
           : {}),

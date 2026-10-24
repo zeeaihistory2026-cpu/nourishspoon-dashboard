@@ -6,6 +6,7 @@ import { customerAction } from "@/lib/customer-commerce";
 export const runtime = "nodejs";
 const actions = new Set([
   "placeOrder",
+  "placeWhatsAppOrder",
   "getReceipt",
   "quoteOrder",
   "getRewards",

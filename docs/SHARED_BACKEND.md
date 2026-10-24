@@ -4,7 +4,7 @@ This dashboard preserves the supplied interactive Next.js design. `apps/admin` i
 
 The server and public Firebase project IDs must both be `nourish-spoon-f4820`. Configure Firebase Admin credentials in Vercel environment settings, never in Git. Dashboard owners require a verified email in ADMIN_EMAILS. Delegated staff require verified email ownership and a current adminAccess record; legacy admin claims cannot override these roles. The session endpoint does not grant administrator claims.
 
-The Android app uses `https://nourishspoon-dashboard.vercel.app/api/shop/{action}` with its Firebase ID token. Supported customer actions: `quoteOrder`, `placeOrder`, `getRewards`, `applyReferral`, `submitReview`, `saveProfilePhoto`, `getReceipt`, `registerDevice`, and `unregisterDevice`. The server verifies tokens, rejects anonymous accounts, recalculates prices from Firestore, validates `promoCodes`, and saves orders through the same stock/reward transactions as the callable backend. No Firebase billing upgrade is required by this transport.
+The Android app uses `https://nourishspoon-dashboard.vercel.app/api/shop/{action}` with its Firebase ID token. Supported customer actions: `quoteOrder`, `placeOrder`, `placeWhatsAppOrder`, `getRewards`, `applyReferral`, `submitReview`, `saveProfilePhoto`, `getReceipt`, `registerDevice`, and `unregisterDevice`. The server verifies tokens, rejects anonymous accounts, recalculates prices from Firestore, validates `promoCodes`, and saves orders through the same stock/reward transactions as the callable backend. No Firebase billing upgrade is required by this transport.
 
 Canonical collections and fields:
 
@@ -33,6 +33,10 @@ Deploy Vercel functions in `bom1` alongside the existing `asia-south1` Firestore
 
 
 ## Order fulfilment and dashboard alerts
+
+Both mobile WhatsApp entry points call the authenticated `placeWhatsAppOrder` action before opening WhatsApp. The action uses the same server pricing, transactional stock reservation and request-ID deduplication as checkout. It records `source: whatsapp_app`, binds `customer_uid` to the verified token, and starts at `pending` / `awaiting_payment` with delivery charges and the final total awaiting confirmation. This action can use the configured dashboard API while `EXPO_PUBLIC_COMMERCE_ENABLED=false`; full checkout and rewards remain behind their existing switch. A failed save never opens WhatsApp. A failed WhatsApp launch leaves the saved request available in My Orders for resending; opening WhatsApp does not establish that a message was sent.
+
+Orders → Add WhatsApp Order uses an authenticated, same-origin POST to `/api/admin/orders` for conversations received directly. These orders have `source: whatsapp_manual`, an audit actor and no customer UID. Phone input does not authorize account linking, customer receipt access, customer notifications or rewards. They remain dashboard-only; app-origin requests appear in the signed-in customer's My Orders. Creation and retries reserve stock once; cancel abandoned requests to restore inventory. Staff confirm the conversation, delivery fee and selected payment method before verifying payment. Payment method `to_confirm` is available for WhatsApp requests; the server rejects marking them paid before the fee and method are confirmed.
 
 Tracking numbers are stored on the canonical order document as tracking_number. The tracking form selects an order by customer-facing number/customer name; the API also accepts that number. Canonical stages are pending, confirmed, preparing, out_for_delivery and delivered. Any forward stage is allowed; completed and cancelled orders cannot be reopened. TCS tracking is optional for dispatch and delivery, including when marking an order delivered directly. An 8–20 digit consignment number can be added later without reopening the order. Supplied tracking numbers are validated. Payment verification and reward settlement remain separate, transactional and idempotent.
 

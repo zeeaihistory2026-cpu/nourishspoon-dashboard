@@ -204,6 +204,7 @@ export function orderView(id: string, raw: Data) {
   return {
     id,
     orderNumber: raw.order_number ?? raw.orderNumber ?? id,
+    source: raw.source ?? "app",
     userId: raw.customer_uid ?? raw.userId ?? "",
     customerName: raw.customer_name ?? raw.customerName ?? "Customer",
     customerEmail: raw.customer_email ?? raw.customerEmail ?? "",

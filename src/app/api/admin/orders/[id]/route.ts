@@ -17,6 +17,7 @@ import {
 } from "@/lib/contracts";
 import { updateOrderRecord } from "@/lib/commerce-server";
 const schema = z.object({
+  refundedEligibleSpend: z.number().int().min(0).optional(),
   orderStatus: z.enum(orderStates).optional(),
   paymentStatus: z.enum(paymentStates).optional(),
   paymentMethod: z
@@ -76,6 +77,7 @@ export async function PATCH(
         id,
         status: input.orderStatus,
         payment_status: input.paymentStatus,
+        ...(input.refundedEligibleSpend !== undefined ? { refunded_eligible_spend: input.refundedEligibleSpend } : {}),
         ...(input.paymentMethod !== undefined
           ? { payment_method: input.paymentMethod }
           : {}),

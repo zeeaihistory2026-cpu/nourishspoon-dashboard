@@ -8,7 +8,8 @@ export async function GET() {
       {
         status: "ok",
         commerce: true,
-        schemaVersion: "commerce-2026-10-24-whatsapp-orders",
+        phoneVerificationMode: "whatsapp_staff",
+        schemaVersion: "commerce-2026-10-26-referral-whatsapp-verification",
         projectId:
           process.env.FIREBASE_PROJECT_ID ||
           process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

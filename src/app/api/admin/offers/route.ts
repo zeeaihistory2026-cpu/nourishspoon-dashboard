@@ -31,11 +31,14 @@ export async function POST(request: Request) {
     const admin = await requireAdmin();
     const data = offerWrite(couponSchema.parse(await request.json()));
     const reference = adminDb().collection("promoCodes").doc(data.code);
-    await reference.create({
+    const batch = adminDb().batch();
+    batch.create(reference, {
       ...data,
       created_at: new Date().toISOString(),
       updated_by: admin.uid,
     });
+    batch.create(adminDb().collection("rewardAudit").doc(), { action: "promo_created", by: admin.uid, reason: `Create promo ${data.code}`, before: null, after: data, at: new Date().toISOString() });
+    await batch.commit();
     return Response.json({ item: offerView(data.code, data) }, { status: 201 });
   } catch (error) {
     return authErrorResponse(error);

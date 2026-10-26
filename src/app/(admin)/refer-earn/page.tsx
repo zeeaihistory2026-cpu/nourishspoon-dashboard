@@ -9,6 +9,7 @@ import {
 } from "@/components/ui";
 import { api, useApi } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
+import { ReferralReview } from "@/components/ReferralReview";
 import type { Referral } from "@/lib/types";
 import {
   Box,
@@ -37,10 +38,18 @@ function Page() {
     refresh: refreshRef,
   } = useApi<{ items: Referral[] }>("/api/admin/referrals?limit=300", true);
 
+  const [selected, setSelected] = useState<Referral | null>(null);
+  const [filter, setFilter] = useState("");
   const [form, setForm] = useState({
     headline: "",
     copy: "",
-    referrerReward: 0,
+    referrerReward: 100,
+    welcomeValue: 150,
+    welcomeType: "fixed",
+    minimumOrder: 599,
+    validityDays: 30,
+    monthlyLimit: 10,
+    campaignEndsAt: "",
     terms: "",
     isActive: true,
   });
@@ -53,7 +62,13 @@ function Page() {
       setForm({
         headline: c.headline ?? "",
         copy: c.copy ?? "",
-        referrerReward: c.referrerReward ?? 0,
+        referrerReward: c.referrerReward ?? 100,
+        welcomeValue: c.welcomeValue ?? 150,
+        welcomeType: c.welcomeType ?? "fixed",
+        minimumOrder: c.minimumOrder ?? 599,
+        validityDays: c.validityDays ?? 30,
+        monthlyLimit: c.monthlyLimit ?? 10,
+        campaignEndsAt: c.campaignEndsAt ?? "",
         terms: c.terms ?? "",
         isActive: c.isActive !== false,
       });
@@ -102,7 +117,9 @@ function Page() {
         key: "referred",
         header: "Referred",
         render: (r) => (
-          <Typography variant="body2">{r.referredName || "—"}</Typography>
+          <Typography variant="body2">
+            {r.referredName || r.referredId?.slice(0, 12) || r.id.slice(0, 12)}
+          </Typography>
         ),
       },
       {
@@ -117,7 +134,21 @@ function Page() {
       {
         key: "status",
         header: "Status",
-        render: (r) => <StatusChip status={r.status} />,
+        render: (r) => (
+          <Box>
+            <StatusChip status={r.status} />
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {r.review_required ? "Fraud review" : r.rewardState || ""}
+              <br />
+              Welcome: {r.welcome_status || "legacy"}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        key: "review",
+        header: "Review",
+        render: (r) => <Button onClick={() => setSelected(r)}>Review</Button>,
       },
       {
         key: "date",
@@ -204,6 +235,51 @@ function Page() {
                 setForm({ ...form, referrerReward: Number(e.target.value) })
               }
             />
+            {(
+              [
+                ["welcomeValue", "Welcome discount value"],
+                ["minimumOrder", "Minimum food subtotal (Rs.)"],
+                ["validityDays", "Welcome validity (days)"],
+                ["monthlyLimit", "Rewards per referrer per calendar month"],
+              ] as const
+            ).map(([key, label]) => (
+              <TextField
+                key={key}
+                size="small"
+                label={label}
+                type="number"
+                value={form[key]}
+                onChange={(e) =>
+                  setForm({ ...form, [key]: Number(e.target.value) })
+                }
+              />
+            ))}
+            <TextField
+              select
+              size="small"
+              label="Welcome discount type"
+              value={form.welcomeType}
+              onChange={(e) =>
+                setForm({ ...form, welcomeType: e.target.value })
+              }
+            >
+              <MenuItem value="fixed">Fixed rupees</MenuItem>
+              <MenuItem value="percent">Percentage</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              label="Campaign ends (optional)"
+              value={form.campaignEndsAt}
+              onChange={(e) =>
+                setForm({ ...form, campaignEndsAt: e.target.value })
+              }
+              helperText="ISO date, e.g. 2026-12-31T18:59:59Z. Existing rewards retain their expiry."
+            />
+            <Typography variant="body2" sx={{ gridColumn: { sm: "1 / -1" } }}>
+              A verified phone is required for welcome rewards. One checkout
+              benefit per order. Limits use Pakistan calendar months. Campaign
+              changes apply to newly attached referrals.
+            </Typography>
             <TextField
               size="small"
               label="Terms"
@@ -253,12 +329,52 @@ function Page() {
         reversed if refunded. Use Offers & Points for an audited balance
         adjustment.
       </Typography>
+      <TextField
+        select
+        size="small"
+        label="Filter status"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        sx={{ mb: 2, minWidth: 200 }}
+      >
+        {[
+          "",
+          "pending",
+          "qualified",
+          "completed",
+          "rewarded",
+          "reversed",
+          "rejected",
+          "expired",
+          "review",
+        ].map((status) => (
+          <MenuItem key={status} value={status}>
+            {status || "All"}
+          </MenuItem>
+        ))}
+      </TextField>
       <DataTable
         columns={columns}
-        rows={refData?.items ?? []}
+        rows={(refData?.items ?? []).filter(
+          (r) =>
+            !filter ||
+            (filter === "review"
+              ? r.review_required || r.rewardState
+              : r.status === filter),
+        )}
         loading={refLoading}
         emptyText="No referrals yet."
       />
+      {selected && (
+        <ReferralReview
+          key={selected.id}
+          referral={
+            (refData?.items || []).find((r) => r.id === selected.id) || selected
+          }
+          onClose={() => setSelected(null)}
+          onUpdated={refreshRef}
+        />
+      )}
     </Box>
   );
 }

@@ -45,6 +45,9 @@ export type Purchase = {
   promo_code?: string;
   promo_discount?: number;
   reward_discount?: number;
+  referral_discount?: number;
+  benefit_type?: "NONE" | "PROMO" | "REFERRAL" | "POINTS";
+  order_benefit?: { type: "NONE" | "PROMO" | "REFERRAL" | "POINTS"; source_id: string; discount_amount: number };
   points_redeemed?: number;
   points_earned?: number;
   delivery_fee: number | null;

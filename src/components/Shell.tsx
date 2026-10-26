@@ -71,6 +71,7 @@ const NAV: {
   { href: "/products", label: "Products", icon: <Inventory2Outlined /> },
   { href: "/orders", label: "Orders", icon: <ShoppingCartOutlined /> },
   { href: "/track-orders", label: "Track Order", icon: <LocationOnOutlined /> },
+  { href: "/marketing-rewards", label: "Marketing & Rewards", icon: <LocalOfferOutlined /> },
   {
     href: "/offers-points",
     label: "Offers & Points",

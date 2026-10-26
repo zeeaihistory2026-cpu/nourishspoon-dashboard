@@ -63,6 +63,10 @@ export const couponSchema = z.object({
   minSubtotal: z.number().int().min(0).optional().nullable(),
   maximumDiscount: z.number().int().min(1).optional().nullable(),
   expiresAt: z.string().optional().nullable(),
+  startsAt: z.string().optional().nullable(),
+  usageLimit: z.number().int().min(1).optional().nullable(),
+  usageLimitPerUser: z.number().int().min(1).optional().nullable(),
+  newUsersOnly: z.boolean().default(false),
   isActive: z.boolean().default(true),
 });
 
@@ -78,7 +82,13 @@ export const pointsAdjustSchema = z.object({
 export const referralConfigSchema = z.object({
   headline: z.string().max(120).default(""),
   copy: z.string().max(2000).default(""),
-  referrerReward: z.number().int().min(0).max(100000).default(200),
+  referrerReward: z.number().int().min(0).max(100000).default(100),
+  welcomeValue: z.number().int().min(0).max(100000).optional(),
+  welcomeType: z.enum(["fixed", "percent"]).optional(),
+  minimumOrder: z.number().int().min(0).max(100000).optional(),
+  validityDays: z.number().int().min(1).max(3650).optional(),
+  monthlyLimit: z.number().int().min(1).max(100000).optional(),
+  campaignEndsAt: z.string().optional().nullable(),
   terms: z.string().max(3000).default(""),
   isActive: z.boolean().default(true),
 });

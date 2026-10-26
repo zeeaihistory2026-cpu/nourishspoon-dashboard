@@ -56,8 +56,12 @@ export async function POST(request: Request) {
         by_email: admin.email ?? "",
         created_at: new Date().toISOString(),
         order_id: "",
+        transaction_type: "ADMIN_ADJUSTMENT",
+        reference_type: "ADMIN",
+        reference_id: requestId,
+        status: "completed",
       };
-      transaction.set(walletRef, { ...before, balance: after });
+      transaction.set(walletRef, { ...before, balance: after, lifetime_earned: before.lifetime_earned + Math.max(0, input.delta) });
       transaction.create(historyRef, entry);
       return { balance: after, item: { id: historyRef.id, ...entry } };
     });

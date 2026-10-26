@@ -1,22 +1,28 @@
 "use client";
 
 import SimpleCrudPage from "@/components/SimpleCrudPage";
-import { DataTable,PageHeader,StatusChip,type Column } from "@/components/ui";
-import { api,useApi } from "@/lib/api";
-import { fmtDate,fmtDateTime,rs } from "@/lib/format";
-import { couponSchema } from "@/lib/schemas";
-import type { Coupon,RewardTransaction } from "@/lib/types";
 import {
-Box,
-Button,
-Card,
-CircularProgress,
-Tab,
-Tabs,
-TextField,
-Typography,
+  DataTable,
+  PageHeader,
+  StatusChip,
+  type Column,
+} from "@/components/ui";
+import { api, useApi } from "@/lib/api";
+import { fmtDate, fmtDateTime, rs } from "@/lib/format";
+import { couponSchema } from "@/lib/schemas";
+import type { Coupon, RewardTransaction } from "@/lib/types";
+import {
+  Box,
+  Button,
+  Card,
+  CircularProgress,
+  MenuItem,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { Suspense,useEffect,useMemo,useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 function OffersTab() {
   return (
@@ -27,15 +33,86 @@ function OffersTab() {
       itemName="Offer"
       schema={couponSchema}
       searchPlaceholder="Search by code..."
-      defaults={{ code: "", description: "", discountType: "percent", value: undefined, minSubtotal: undefined, expiresAt: "", isActive: true }}
-      deleteConfirm={(r: any) => `Delete offer "${r.code}"? Customers will no longer be able to use it at checkout.`}
+      defaults={{
+        code: "",
+        description: "",
+        discountType: "percent",
+        value: undefined,
+        minSubtotal: undefined,
+        expiresAt: "",
+        isActive: true,
+      }}
+      deleteConfirm={(r: any) =>
+        `Delete offer "${r.code}"? Customers will no longer be able to use it at checkout.`
+      }
       fields={[
-        { name: "code", label: "Promo code", type: "text", required: true, hint: "Shown to customers, e.g. EID10." },
-        { name: "description", label: "Description", type: "textarea", rows: 2 },
-        { name: "discountType", label: "Discount type", type: "select", options: [{ value: "percent", label: "Percent %" }, { value: "fixed", label: "Fixed Rs." }] },
-        { name: "value", label: "Value", type: "number", min: 0, required: true, hint: "Percent (e.g. 10) or rupees, depending on type." },
-        { name: "minSubtotal", label: "Minimum order (Rs.)", type: "number", min: 0 },
-        { name: "expiresAt", label: "Expiry date", type: "text", hint: "YYYY-MM-DD, optional." },
+        {
+          name: "code",
+          label: "Promo code",
+          type: "text",
+          required: true,
+          hint: "Shown to customers, e.g. EID10.",
+        },
+        {
+          name: "description",
+          label: "Description",
+          type: "textarea",
+          rows: 2,
+        },
+        {
+          name: "discountType",
+          label: "Discount type",
+          type: "select",
+          options: [
+            { value: "percent", label: "Percent %" },
+            { value: "fixed", label: "Fixed Rs." },
+          ],
+        },
+        {
+          name: "value",
+          label: "Value",
+          type: "number",
+          min: 0,
+          required: true,
+          hint: "Percent (e.g. 10) or rupees, depending on type.",
+        },
+        {
+          name: "minSubtotal",
+          label: "Minimum order (Rs.)",
+          type: "number",
+          min: 0,
+        },
+        {
+          name: "maximumDiscount",
+          label: "Maximum discount (Rs.)",
+          type: "number",
+          min: 1,
+        },
+        {
+          name: "startsAt",
+          label: "Starts at",
+          type: "text",
+          hint: "ISO date/time, optional.",
+        },
+        {
+          name: "usageLimit",
+          label: "Total uses allowed",
+          type: "number",
+          min: 1,
+        },
+        {
+          name: "usageLimitPerUser",
+          label: "Uses per customer",
+          type: "number",
+          min: 1,
+        },
+        { name: "newUsersOnly", label: "New customers only", type: "switch" },
+        {
+          name: "expiresAt",
+          label: "Expiry date",
+          type: "text",
+          hint: "YYYY-MM-DD, optional.",
+        },
         { name: "isActive", label: "Active", type: "switch" },
       ]}
       columns={[
@@ -43,7 +120,18 @@ function OffersTab() {
           key: "code",
           header: "Code",
           render: (r: Coupon) => (
-            <Typography variant="body2" sx={{ fontWeight: 800, fontFamily: "monospace", background: "#f4e9c8", px: 1.2, py: 0.4, borderRadius: 1, display: "inline-block" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 800,
+                fontFamily: "monospace",
+                background: "#f4e9c8",
+                px: 1.2,
+                py: 0.4,
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            >
               {r.code}
             </Typography>
           ),
@@ -52,25 +140,49 @@ function OffersTab() {
           key: "benefit",
           header: "Benefit",
           render: (r: Coupon) => (
-            <Typography variant="body2" sx={{ fontWeight: 700 }} className="tnum">
-              {r.discountType === "percent" ? `${r.value}% off` : `${rs(r.value)} off`}
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 700 }}
+              className="tnum"
+            >
+              {r.discountType === "percent"
+                ? `${r.value}% off`
+                : `${rs(r.value)} off`}
             </Typography>
           ),
         },
         {
           key: "minSubtotal",
           header: "Min. order",
-          render: (r: Coupon) => <Typography variant="body2" className="tnum">{r.minSubtotal ? rs(r.minSubtotal) : "—"}</Typography>,
+          render: (r: Coupon) => (
+            <Typography variant="body2" className="tnum">
+              {r.minSubtotal ? rs(r.minSubtotal) : "—"}
+            </Typography>
+          ),
         },
         {
           key: "expiresAt",
           header: "Expires",
-          render: (r: Coupon) => <Typography variant="body2">{r.expiresAt ? fmtDate(r.expiresAt) : "No expiry"}</Typography>,
+          render: (r: Coupon) => (
+            <Typography variant="body2">
+              {r.expiresAt ? fmtDate(r.expiresAt) : "No expiry"}
+            </Typography>
+          ),
         },
         {
           key: "isActive",
           header: "Status",
-          render: (r: Coupon) => <StatusChip status={!r.isActive ? "inactive" : r.expiresAt && Date.parse(r.expiresAt) <= Date.now() ? "expired" : "active"} />,
+          render: (r: Coupon) => (
+            <StatusChip
+              status={
+                !r.isActive
+                  ? "inactive"
+                  : r.expiresAt && Date.parse(r.expiresAt) <= Date.now()
+                    ? "expired"
+                    : "active"
+              }
+            />
+          ),
         },
       ]}
     />
@@ -78,9 +190,25 @@ function OffersTab() {
 }
 
 function PointsTab() {
-  const { data: cfgData, loading: cfgLoading, refresh: refreshCfg } = useApi<{ item: any }>("/api/admin/points/config");
-  const { data: txData, loading: txLoading } = useApi<{ items: RewardTransaction[] }>("/api/admin/points/transactions?limit=100", true);
-  const [form, setForm] = useState({ spendPerPoint: 0, redeemValuePerPoint: 0, minRedeemPoints: 0, referralReward: 0, isActive: true, notes: "" });
+  const {
+    data: cfgData,
+    loading: cfgLoading,
+    refresh: refreshCfg,
+  } = useApi<{ item: any }>("/api/admin/points/config");
+  const { data: txData, loading: txLoading } = useApi<{
+    items: RewardTransaction[];
+  }>("/api/admin/points/transactions?limit=100", true);
+  const [form, setForm] = useState({
+    pointsPerUnit: 2,
+    maximumRedemptionPercent: 100,
+    maximumRedemptionPoints: "",
+    spendPerPoint: 100,
+    redeemValuePerPoint: 0,
+    minRedeemPoints: 0,
+    referralReward: 0,
+    isActive: true,
+    notes: "",
+  });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -88,7 +216,13 @@ function PointsTab() {
     if (cfgData?.item) {
       const c = cfgData.item;
       setForm({
-        spendPerPoint: c.spendPerPoint ?? 0,
+        pointsPerUnit: c.pointsPerUnit ?? 2,
+        maximumRedemptionPercent: c.maximumRedemptionPercent ?? 100,
+        maximumRedemptionPoints:
+          c.maximumRedemptionPoints == null
+            ? ""
+            : String(c.maximumRedemptionPoints),
+        spendPerPoint: c.spendPerPoint ?? 100,
         redeemValuePerPoint: c.redeemValuePerPoint ?? 0,
         minRedeemPoints: c.minRedeemPoints ?? 0,
         referralReward: c.referralReward ?? 0,
@@ -102,7 +236,16 @@ function PointsTab() {
     setSaving(true);
     setMsg(null);
     try {
-      await api("/api/admin/points/config", { method: "PUT", body: JSON.stringify(form) });
+      await api("/api/admin/points/config", {
+        method: "PUT",
+        body: JSON.stringify({
+          ...form,
+          maximumRedemptionPoints:
+            form.maximumRedemptionPoints === ""
+              ? null
+              : Number(form.maximumRedemptionPoints),
+        }),
+      });
       setMsg("Reward rules saved.");
       refreshCfg();
     } catch (e) {
@@ -112,67 +255,197 @@ function PointsTab() {
     }
   }
 
-  const columns: Column<RewardTransaction>[] = useMemo(() => [
-    {
-      key: "user",
-      header: "Customer",
-      render: (r) => <Typography variant="body2" sx={{ fontWeight: 700 }}>{r.userName || r.userId.slice(0, 8)}</Typography>,
-    },
-    {
-      key: "reason",
-      header: "Reason",
-      render: (r) => <Typography variant="body2" sx={{ color: "text.secondary" }}>{r.reason}</Typography>,
-    },
-    {
-      key: "delta",
-      header: "Points",
-      render: (r) => (
-        <Typography variant="body2" className="tnum" sx={{ fontWeight: 800, color: r.delta >= 0 ? "#2e7d4f" : "#c0392b" }}>
-          {r.delta >= 0 ? "+" : ""}{r.delta}
-        </Typography>
-      ),
-    },
-    {
-      key: "at",
-      header: "Date",
-      render: (r) => <Typography variant="body2" sx={{ color: "text.secondary" }}>{fmtDateTime(r.at)}</Typography>,
-    },
-    {
-      key: "by",
-      header: "By",
-      render: (r) => <Typography variant="caption" sx={{ color: "text.secondary" }}>{r.byEmail || "system"}</Typography>,
-    },
-  ], []);
+  const columns: Column<RewardTransaction>[] = useMemo(
+    () => [
+      {
+        key: "user",
+        header: "Customer",
+        render: (r) => (
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {r.userName || r.userId.slice(0, 8)}
+          </Typography>
+        ),
+      },
+      {
+        key: "reason",
+        header: "Reason",
+        render: (r) => (
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {r.reason}
+          </Typography>
+        ),
+      },
+      {
+        key: "delta",
+        header: "Points",
+        render: (r) => (
+          <Typography
+            variant="body2"
+            className="tnum"
+            sx={{
+              fontWeight: 800,
+              color: r.delta >= 0 ? "#2e7d4f" : "#c0392b",
+            }}
+          >
+            {r.delta >= 0 ? "+" : ""}
+            {r.delta}
+          </Typography>
+        ),
+      },
+      {
+        key: "at",
+        header: "Date",
+        render: (r) => (
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {fmtDateTime(r.at)}
+          </Typography>
+        ),
+      },
+      {
+        key: "by",
+        header: "By",
+        render: (r) => (
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {r.byEmail || "system"}
+          </Typography>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <Box className="flex flex-col gap-5">
       <Card sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
+        <Typography
+          variant="h6"
+          sx={{ fontFamily: "var(--font-display)", fontWeight: 700, mb: 1 }}
+        >
           Reward Rules
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-          How customers earn and redeem points. Only enable rules the app actually supports.
+          How customers earn and redeem points. Only enable rules the app
+          actually supports.
         </Typography>
         {msg && (
-          <Typography variant="body2" sx={{ mb: 2, background: msg.includes("failed") ? "#fdecea" : "#e7f4ea", color: msg.includes("failed") ? "#c0392b" : "#2e7d4f", p: 1.5, borderRadius: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 2,
+              background: msg.includes("failed") ? "#fdecea" : "#e7f4ea",
+              color: msg.includes("failed") ? "#c0392b" : "#2e7d4f",
+              p: 1.5,
+              borderRadius: 2,
+            }}
+          >
             {msg}
           </Typography>
         )}
         {cfgLoading ? (
           <CircularProgress size={24} />
         ) : (
-          <Box className="grid gap-3" sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField size="small" label="Rs. spent to earn one point" type="number" slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              value={form.spendPerPoint} onChange={(e) => setForm({ ...form, spendPerPoint: Number(e.target.value) })} />
-            <TextField size="small" label="Rs. value per point on redeem" type="number" slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              value={form.redeemValuePerPoint} onChange={(e) => setForm({ ...form, redeemValuePerPoint: Number(e.target.value) })} />
-            <TextField size="small" label="Minimum points to redeem" type="number" slotProps={{ htmlInput: { min: 0 } }}
-              value={form.minRedeemPoints} onChange={(e) => setForm({ ...form, minRedeemPoints: Number(e.target.value) })} />
-            <TextField size="small" label="Referrer reward points" type="number" slotProps={{ htmlInput: { min: 0 } }}
-              value={form.referralReward} onChange={(e) => setForm({ ...form, referralReward: Number(e.target.value) })} />
-            <TextField size="small" label="Notes" multiline rows={2} value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })} sx={{ gridColumn: { sm: "1 / -1" } }} />
-            <Box sx={{ gridColumn: { sm: "1 / -1" } }} className="flex justify-end">
+          <Box
+            className="grid gap-3"
+            sx={{ gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}
+          >
+            <TextField
+              size="small"
+              label="Net food spend per earning unit (Rs.)"
+              type="number"
+              slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              value={form.spendPerPoint}
+              onChange={(e) =>
+                setForm({ ...form, spendPerPoint: Number(e.target.value) })
+              }
+            />
+            <TextField
+              size="small"
+              label="Points earned per unit"
+              type="number"
+              value={form.pointsPerUnit}
+              onChange={(e) =>
+                setForm({ ...form, pointsPerUnit: Number(e.target.value) })
+              }
+            />
+            <TextField
+              size="small"
+              label="Maximum food subtotal redeemable (%)"
+              type="number"
+              value={form.maximumRedemptionPercent}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  maximumRedemptionPercent: Number(e.target.value),
+                })
+              }
+            />
+            <TextField
+              size="small"
+              label="Maximum points per order (optional)"
+              type="number"
+              value={form.maximumRedemptionPoints}
+              onChange={(e) =>
+                setForm({ ...form, maximumRedemptionPoints: e.target.value })
+              }
+            />
+            <TextField
+              select
+              size="small"
+              label="Loyalty status"
+              value={form.isActive ? "active" : "paused"}
+              onChange={(e) =>
+                setForm({ ...form, isActive: e.target.value === "active" })
+              }
+            >
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="paused">Paused</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              label="Rs. value per point on redeem"
+              type="number"
+              slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              value={form.redeemValuePerPoint}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  redeemValuePerPoint: Number(e.target.value),
+                })
+              }
+            />
+            <TextField
+              size="small"
+              label="Minimum points to redeem"
+              type="number"
+              slotProps={{ htmlInput: { min: 0 } }}
+              value={form.minRedeemPoints}
+              onChange={(e) =>
+                setForm({ ...form, minRedeemPoints: Number(e.target.value) })
+              }
+            />
+            <TextField
+              size="small"
+              label="Referrer reward points"
+              type="number"
+              slotProps={{ htmlInput: { min: 0 } }}
+              value={form.referralReward}
+              onChange={(e) =>
+                setForm({ ...form, referralReward: Number(e.target.value) })
+              }
+            />
+            <TextField
+              size="small"
+              label="Notes"
+              multiline
+              rows={2}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              sx={{ gridColumn: { sm: "1 / -1" } }}
+            />
+            <Box
+              sx={{ gridColumn: { sm: "1 / -1" } }}
+              className="flex justify-end"
+            >
               <Button variant="contained" onClick={save} disabled={saving}>
                 {saving ? "Saving..." : "Save rules"}
               </Button>
@@ -182,13 +455,22 @@ function PointsTab() {
       </Card>
 
       <Box>
-        <Typography variant="h6" sx={{ fontFamily: 'var(--font-display)', fontWeight: 700, mb: 1 }}>
+        <Typography
+          variant="h6"
+          sx={{ fontFamily: "var(--font-display)", fontWeight: 700, mb: 1 }}
+        >
           Points Ledger
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-          Every points adjustment, newest first. Adjust a customer's balance from their customer page.
+          Every points adjustment, newest first. Adjust a customer's balance
+          from their customer page.
         </Typography>
-        <DataTable columns={columns} rows={txData?.items ?? []} loading={txLoading} emptyText="No points activity yet." />
+        <DataTable
+          columns={columns}
+          rows={txData?.items ?? []}
+          loading={txLoading}
+          emptyText="No points activity yet."
+        />
       </Box>
     </Box>
   );
@@ -198,8 +480,15 @@ function Page() {
   const [tab, setTab] = useState(0);
   return (
     <Box>
-      <PageHeader title="Offers & Points" subtitle="Promo codes for checkout and the customer rewards program." />
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: "1px solid #e7ddc2" }}>
+      <PageHeader
+        title="Offers & Points"
+        subtitle="Promo codes for checkout and the customer rewards program."
+      />
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        sx={{ mb: 3, borderBottom: "1px solid #e7ddc2" }}
+      >
         <Tab label="Offers" sx={{ fontWeight: 700 }} />
         <Tab label="Points" sx={{ fontWeight: 700 }} />
       </Tabs>

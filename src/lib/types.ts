@@ -98,6 +98,10 @@ export interface Order {
   trackingNumber: string;
   quotePending: boolean;
   discount?: number;
+  benefitType?: string;
+  referralDiscount?: number;
+  refundedEligibleSpend?: number;
+  rewardsSettled?: boolean;
   total: number | null;
   paymentMethod: "bank_transfer" | "easypaisa" | "jazzcash" | "to_confirm";
   paymentStatus: "awaiting_payment" | "submitted" | "paid" | "refunded";
@@ -238,7 +242,11 @@ export interface Referral {
   referredId?: string;
   referredName?: string;
   code?: string;
-  status: "pending" | "completed" | "rewarded" | "reversed";
+  status: "pending" | "qualified" | "completed" | "rewarded" | "reversed" | "rejected" | "expired";
+  review_required?: boolean;
+  welcome_status?: string;
+  expires_at?: string;
+  orderId?: string;
   rewardState?: string;
   rewardAmount?: number;
   createdAt?: ISODate | null;

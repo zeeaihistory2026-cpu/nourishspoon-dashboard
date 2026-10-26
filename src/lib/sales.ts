@@ -21,7 +21,8 @@ export function salesReport(orders: Data[], now = Date.now()) {
   let invalidPaidOrders = 0, legacyPaymentDates = 0;
   const payments = orders.flatMap((order) => {
     if ((order.payment_status ?? order.paymentStatus) !== "paid") return [];
-    if (order.quote_pending || !Number.isSafeInteger(order.total) || order.total < 0) {
+    const refund = order.refunded_eligible_spend || 0;
+    if (order.quote_pending || !Number.isSafeInteger(order.total) || order.total < 0 || !Number.isSafeInteger(refund) || refund < 0 || refund > order.total) {
       invalidPaidOrders++;
       return [];
     }
@@ -31,7 +32,7 @@ export function salesReport(orders: Data[], now = Date.now()) {
     const at = paidAt || time(order.created_at ?? order.createdAt);
     if (!paidAt) legacyPaymentDates++;
     if (!at || at > now) return [];
-    return [{ id: String(order.id || ""), orderNumber: String(order.order_number ?? order.orderNumber ?? order.id ?? ""), amount: order.total as number, at, legacyDate: !paidAt }];
+    return [{ id: String(order.id || ""), orderNumber: String(order.order_number ?? order.orderNumber ?? order.id ?? ""), amount: (order.total as number) - refund, at, legacyDate: !paidAt }];
   });
   const sum = (rows: typeof payments) => rows.reduce((total, row) => total + row.amount, 0);
   const range = (from: number, until: number) => payments.filter(row => row.at >= from && row.at < until);

@@ -78,6 +78,7 @@ function OrderDetail({
   const [newPayment, setNewPayment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
+  const [foodRefund, setFoodRefund] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -98,6 +99,7 @@ function OrderDetail({
         order.deliveryFee == null ? "" : String(order.deliveryFee),
       );
       setTrackingNumber(order.trackingNumber || "");
+      setFoodRefund(String(order.refundedEligibleSpend || 0));
     }
   }, [order?.id, order?.updatedAt]);
 
@@ -123,6 +125,7 @@ function OrderDetail({
           paymentStatus: newPayment || undefined,
           ...(paymentMethod !== order.paymentMethod ? { paymentMethod } : {}),
           note: note || undefined,
+          ...(foodRefund !== "" && Number(foodRefund) !== (order.refundedEligibleSpend || 0) ? { refundedEligibleSpend: Number(foodRefund) } : {}),
           ...(deliveryFee !== "" && Number(deliveryFee) !== order.deliveryFee
             ? { deliveryFee: Number(deliveryFee) }
             : {}),
@@ -500,6 +503,7 @@ function OrderDetail({
           sx={{ mt: 2 }}
           placeholder="Visible in the order timeline"
         />
+        {order.rewardsSettled && order.paymentStatus === "paid" && <TextField fullWidth size="small" type="number" label="Cumulative food refund (Rs.)" value={foodRefund} onChange={(e) => setFoodRefund(e.target.value)} sx={{ mt: 2 }} slotProps={{ htmlInput: { min: order.refundedEligibleSpend || 0, max: order.subtotal - (order.discount || 0), step: 1 } }} helperText={`Record money already refunded for food after discounts. Excludes delivery. Points are reversed proportionally. Benefit: ${order.benefitType || "NONE"}.`} />}
         {msg && (
           <Typography
             role={saveFailed ? "alert" : "status"}
@@ -526,6 +530,7 @@ function OrderDetail({
               (newStatus === order.orderStatus &&
                 newPayment === order.paymentStatus &&
                 paymentMethod === order.paymentMethod &&
+                Number(foodRefund || 0) === (order.refundedEligibleSpend || 0) &&
                 !note &&
                 trackingNumber === order.trackingNumber &&
                 (deliveryFee === "" ||

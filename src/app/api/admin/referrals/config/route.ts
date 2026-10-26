@@ -25,6 +25,13 @@ export async function GET() {
         id: DOC,
         referrerReward: config.referral_points,
         isActive: config.referrals_enabled,
+        welcomeValue: config.welcome_value,
+        welcomeType: config.welcome_type,
+        minimumOrder: config.referral_minimum,
+        validityDays: config.referral_valid_days,
+        monthlyLimit: config.referral_monthly_limit,
+        campaignEndsAt: config.referral_ends_at,
+        requiresVerifiedPhone: true,
       },
     });
   } catch (err) {
@@ -37,26 +44,55 @@ export async function PUT(req: Request) {
     const admin = await requireAdminMutation(req);
     const parsed = referralConfigSchema.parse(await req.json());
     const ref = adminDb().collection("appConfig").doc(DOC);
-    const batch = adminDb().batch();
-    batch.set(
-      ref,
-      {
-        ...parsed,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: admin.uid,
-        updatedByEmail: (admin.email as string) ?? "",
-      },
-      { merge: true },
-    );
-    batch.set(
-      adminDb().doc("settings/rewards"),
-      {
+    await adminDb().runTransaction(async (tx) => {
+      const settings = adminDb().doc("settings/rewards");
+      const [previous, copy] = await Promise.all([
+        tx.get(settings),
+        tx.get(ref),
+      ]);
+      const next = rules.rewardsConfig({
+        ...previous.data(),
         referral_points: parsed.referrerReward,
         referrals_enabled: parsed.isActive,
-      },
-      { merge: true },
-    );
-    await batch.commit();
+        ...(parsed.welcomeValue !== undefined
+          ? { welcome_value: parsed.welcomeValue }
+          : {}),
+        ...(parsed.welcomeType !== undefined
+          ? { welcome_type: parsed.welcomeType }
+          : {}),
+        ...(parsed.minimumOrder !== undefined
+          ? { referral_minimum: parsed.minimumOrder }
+          : {}),
+        ...(parsed.validityDays !== undefined
+          ? { referral_valid_days: parsed.validityDays }
+          : {}),
+        ...(parsed.monthlyLimit !== undefined
+          ? { referral_monthly_limit: parsed.monthlyLimit }
+          : {}),
+        ...(parsed.campaignEndsAt !== undefined
+          ? { referral_ends_at: parsed.campaignEndsAt || null }
+          : {}),
+      });
+      tx.set(
+        ref,
+        {
+          ...parsed,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: admin.uid,
+          updatedByEmail: admin.email || "",
+        },
+        { merge: true },
+      );
+      tx.set(settings, next);
+      tx.create(adminDb().collection("rewardAudit").doc(), {
+        action: "referral_settings",
+        by: admin.uid,
+        reason: "Update referral campaign configuration",
+        before: { settings: previous.data() || {}, copy: copy.data() || {} },
+        after: { settings: next, copy: parsed },
+        at: new Date().toISOString(),
+      });
+    });
     const snap = await ref.get();
     return Response.json({ item: docToJSON(snap) });
   } catch (err) {

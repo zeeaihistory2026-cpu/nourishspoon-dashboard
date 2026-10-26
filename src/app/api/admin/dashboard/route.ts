@@ -20,7 +20,7 @@ export async function GET() {
       db.collection("products").limit(1000).get(),
       recentOrders(5),
       db.collection("promoCodes").limit(1000).get(),
-      db.collection("orders").select("total", "payment_status", "paymentStatus", "paid_at", "quote_pending", "created_at", "createdAt", "status", "orderStatus", "tracking_number", "order_number", "customer_name", "updated_at").get(),
+      db.collection("orders").select("total", "refunded_eligible_spend", "payment_status", "paymentStatus", "paid_at", "quote_pending", "created_at", "createdAt", "status", "orderStatus", "tracking_number", "order_number", "customer_name", "updated_at").get(),
     ]);
     const products = catalog.docs
       .map((doc) => productView(doc.id, doc.data()))

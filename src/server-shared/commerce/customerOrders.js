@@ -53,13 +53,8 @@ exports.createOrderPlacer = function ({ db, loyalty, normalizeProduct }) {
         !customer?.data()?.has_order,
       );
       const discounts = uid
-        ? await loyalty.checkout(
-            tx,
-            uid,
-            whatsapp ? { ...input, promo_code: "", reward_points: 0 } : input,
-            priced,
-          )
-        : { result: {}, apply() {} };
+        ? await loyalty.checkout(tx, uid, input, priced)
+        : { result: { benefit_type: "NONE", order_benefit: { type: "NONE", source_id: "", discount_amount: 0 } }, apply() {} };
       const order = {
         ...priced,
         ...discounts.result,

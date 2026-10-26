@@ -3,7 +3,7 @@ import { createOrderUpdater } from "../server-shared/commerce/adminOrders.js";
 import { createOrderPlacer } from "../server-shared/commerce/customerOrders.js";
 import createRewards from "../server-shared/commerce/rewards.js";
 import { normalizeProduct } from "../server-shared/catalog/normalizeProduct.js";
-import { adminDb } from "./firebase-admin";
+import { adminDb, adminAuth } from "./firebase-admin";
 import { AuthError } from "./auth-server";
 import type { Data } from "./contracts";
 
@@ -40,6 +40,7 @@ export async function updateOrderRecord(input: Data, actor: { uid: string }) {
   };
   const loyalty = createRewards({
     db,
+    auth: adminAuth(),
     callable: (action: unknown) => action,
     signedIn: notCallable,
     owner: notCallable,

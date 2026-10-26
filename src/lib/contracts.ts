@@ -227,6 +227,10 @@ export function orderView(id: string, raw: Data) {
     quotePending: raw.quote_pending === true,
     subtotal: raw.subtotal ?? 0,
     discount: raw.discount ?? 0,
+    benefitType: raw.benefit_type || (raw.promo_code && raw.reward_discount ? "LEGACY_STACKED" : raw.promo_code ? "PROMO" : raw.reward_discount ? "POINTS" : "NONE"),
+    referralDiscount: raw.referral_discount || 0,
+    refundedEligibleSpend: raw.refunded_eligible_spend || 0,
+    rewardsSettled: raw.rewards_settled === true,
     deliveryFee: raw.delivery_fee ?? raw.deliveryFee ?? null,
     total: raw.total ?? null,
     shippingAddress: raw.shippingAddress ?? {

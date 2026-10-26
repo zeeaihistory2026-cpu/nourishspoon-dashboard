@@ -46,6 +46,7 @@ export async function PATCH(
         },
         { merge: true },
       );
+      transaction.create(adminDb().collection("rewardAudit").doc(), { action: "promo_updated", by: admin.uid, reason: `Update promo ${id}`, before: previous, after: data, at: new Date().toISOString() });
       return offerView(id, data);
     });
     return Response.json({ item });
@@ -74,6 +75,7 @@ export async function DELETE(
         updated_at: new Date().toISOString(),
         updated_by: admin.uid,
       });
+      transaction.create(adminDb().collection("rewardAudit").doc(), { action: "promo_paused", by: admin.uid, reason: `Pause promo ${id}`, before: data, after: { ...data, active: false }, at: new Date().toISOString() });
     });
     return Response.json({ ok: true });
   } catch (error) {

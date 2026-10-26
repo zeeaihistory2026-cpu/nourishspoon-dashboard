@@ -56,6 +56,7 @@ export async function receiptPdf(order: Data) {
   if (order.quote_pending || !Number.isSafeInteger(order.total) || order.total < 0)
     throw new Error("Your final amount is awaiting confirmation. Please download the receipt after it is confirmed.");
   const expected = order.subtotal + order.delivery_fee - order.discount;
+  if (!Number.isSafeInteger(order.refunded_eligible_spend || 0) || (order.refunded_eligible_spend || 0) < 0 || (order.refunded_eligible_spend || 0) > order.subtotal - order.discount) throw new Error("The refund amount needs verification. Please contact Nourish Spoon.");
   if (![order.subtotal, order.delivery_fee, order.discount].every(Number.isSafeInteger) || expected !== order.total)
     throw new Error("The order amount needs verification. Please contact Nourish Spoon.");
   if (!Array.isArray(order.items) || !order.items.length || order.items.reduce((sum: number, item: Data) => sum + item.total_price, 0) !== order.subtotal)
@@ -78,7 +79,8 @@ export async function receiptPdf(order: Data) {
   if (order.discount) doc.line("Discounts and rewards", `- ${money(order.discount)}`);
   doc.line("Delivery charges", money(order.delivery_fee));
   doc.line("ORDER TOTAL", money(order.total), true);
-  doc.line(order.payment_status === "paid" ? "AMOUNT PAID" : "AMOUNT PAID (currently verified)", money(order.payment_status === "paid" ? order.total : 0), true);
+  if (order.refunded_eligible_spend) doc.line("Food refund recorded", `- ${money(order.refunded_eligible_spend)}`);
+  doc.line(order.payment_status === "paid" ? "NET AMOUNT PAID" : "AMOUNT PAID (currently verified)", money(order.payment_status === "paid" ? order.total - (order.refunded_eligible_spend || 0) : 0), true);
   if (order.payment_status !== "paid") doc.line("This document does not confirm payment received.");
   return doc.finish();
 }
@@ -89,7 +91,7 @@ export async function revenuePdf(report: ReturnType<typeof salesReport>, period:
   doc.line(`Period: ${date(summary.from)} to ${date(summary.until)} (Pakistan time)`);
   doc.line("REVENUE RECEIVED", money(summary.total), true);
   doc.line("Paid orders", String(summary.orders));
-  doc.line("Final order amounts after discounts, including delivery. Refunded payments are excluded.");
+  doc.line("Final order amounts after discounts and recorded food refunds, including delivery. Fully refunded payments are excluded.");
   doc.gap(); doc.line("DAILY TOTALS", "RECEIVED", true);
   for (const point of summary.points) doc.line(`${point.date} | ${point.orders} paid orders`, money(point.revenue));
   doc.gap(); doc.line("PAID ORDERS", "RECEIVED", true);

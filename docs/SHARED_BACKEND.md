@@ -48,6 +48,12 @@ Sales supports the last seven days and the current calendar month to date in Asi
 
 The existing info@nourishspoon.com owner also retains its explicitly provisioned server-issued Firebase admin claim. This exception does not grant or elevate delegated users.
 
+## Referral rewards
+
+Phase 1 uses a single server-authorized `order_benefit` (`NONE`, `PROMO`, `REFERRAL`, `POINTS`) and keeps referral attribution independent of the selected discount. The welcome benefit requires a Firebase-verified phone and a private transactional phone claim. Paid delivery settlement, monthly limits, cancellation restoration and refund reversals share the same immutable ledger engine for Vercel and callable transports. See [implementation and rollout notes](../../../docs/qa/referral-rewards-2026-10-25.md).
+
+`EXPO_PUBLIC_REWARDS_ENABLED` can enable rewards on saved app WhatsApp orders while full online ordering remains disabled. Direct staff-entered WhatsApp orders are not linked by a profile phone and receive no account rewards. Recorded partial food refunds reduce paid revenue and reverse purchase points proportionally.
+
 ## Customer review and profile photos
 
 Verified buyers can submit one review per delivered order/product. New reviews remain pending until the owner approves them; approved reviews refresh in the mobile Reviews tab through Firestore. The dashboard listens to review updated_at changes, supports a Pending approval filter, and preserves the original text and rating during moderation.

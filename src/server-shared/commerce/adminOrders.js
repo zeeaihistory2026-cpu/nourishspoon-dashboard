@@ -43,6 +43,13 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
         input.payment_status !== order.payment_status
       ) {
         if (
+          order.payment_status === "paid" &&
+          !["paid", "refunded"].includes(input.payment_status)
+        )
+          throw new Error(
+            "A verified payment can only be changed to refunded.",
+          );
+        if (
           order.payment_status === "refunded" &&
           input.payment_status !== "refunded"
         )
@@ -84,6 +91,19 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
         if (tracking && !/^\d{8,20}$/.test(tracking))
           throw new Error("Enter a valid TCS consignment number.");
         patch.tracking_number = tracking;
+      }
+      if (input.refunded_eligible_spend !== undefined) {
+        const amount = input.refunded_eligible_spend;
+        if (
+          !Number.isSafeInteger(amount) ||
+          amount < (order.refunded_eligible_spend || 0) ||
+          amount > order.subtotal - order.discount ||
+          !order.rewards_settled
+        )
+          throw new Error(
+            "Enter a cumulative food refund between the previous refund and the net food spend of a completed order.",
+          );
+        patch.refunded_eligible_spend = amount;
       }
       if (
         ["confirmed", "preparing", "out_for_delivery", "delivered"].includes(
@@ -146,6 +166,7 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
           patch.payment_status ||
           patch.payment_method_code ||
           patch.tracking_number !== undefined ||
+          patch.refunded_eligible_spend !== undefined ||
           patch.total !== undefined)
       ) {
         const after = { ...order, ...patch };
@@ -156,7 +177,7 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
           {
             order_id: ref.id,
             title: `${order.order_number} updated`,
-            body: `Order: ${String(after.status || "pending").replaceAll("_", " ")}. Payment: ${String(after.payment_status || "awaiting_payment").replaceAll("_", " ")}.`,
+            body: `Order: ${String(after.status || "pending").replaceAll("_", " ")}. Payment: ${String(after.payment_status || "awaiting_payment").replaceAll("_", " ")}.${patch.refunded_eligible_spend !== undefined ? ` Food refunds recorded: Rs. ${patch.refunded_eligible_spend}. Related points adjusted.` : ""}`,
             created_at: patch.updated_at,
             read: false,
           },
@@ -168,6 +189,9 @@ function createOrderUpdater({ db, loyalty, normalizeProduct }) {
           from: order.status,
           to: patch.status || order.status,
           payment_status: patch.payment_status || order.payment_status,
+          ...(patch.refunded_eligible_spend !== undefined
+            ? { refunded_eligible_spend: patch.refunded_eligible_spend }
+            : {}),
           note: input.note ? domain.text(input.note, "note", 500) : "",
           by: actor.uid,
           at: patch.updated_at,

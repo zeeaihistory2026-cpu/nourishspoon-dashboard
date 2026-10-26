@@ -1,5 +1,6 @@
 import { adminDb, docToJSON } from "@/lib/firebase-admin";
 import { requireAdmin, authErrorResponse } from "@/lib/auth-server";
+import { rules } from "@/lib/rewards-server";
 
 export async function GET(req: Request) {
   try {
@@ -16,10 +17,12 @@ export async function GET(req: Request) {
       .orderBy("createdAt", "desc")
       .limit(limit)
       .get();
-    let items = snap.docs.map((d) => docToJSON(d)).filter(Boolean) as Record<
-      string,
-      unknown
-    >[];
+    const config = rules.rewardsConfig(
+      (await adminDb().doc("settings/rewards").get()).data(),
+    );
+    let items = snap.docs
+      .map((d) => ({ id: d.id, ...rules.referralView(docToJSON(d), config) }))
+      .filter(Boolean) as Record<string, unknown>[];
     if (status) items = items.filter((r) => r.status === status);
     if (search) {
       items = items.filter((r) =>

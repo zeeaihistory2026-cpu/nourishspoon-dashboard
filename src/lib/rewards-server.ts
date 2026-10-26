@@ -7,6 +7,9 @@ export function emptyWallet(uid: string) {
     uid,
     balance: 0,
     lifetime_earned: 0,
+    pending_points: 0,
+    lifetime_redeemed: 0,
+    lifetime_expired: 0,
     referral_code:
       "NS" +
       createHash("sha256").update(uid).digest("hex").slice(0, 10).toUpperCase(),

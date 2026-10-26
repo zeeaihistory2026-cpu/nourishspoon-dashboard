@@ -4,10 +4,12 @@ import { createOrderPlacer } from "../server-shared/commerce/customerOrders.js";
 import { createReviewSubmitter } from "../server-shared/commerce/customerReviews.js";
 import { saveProfilePhoto } from "../server-shared/commerce/customerPhotos.js";
 import { normalizeProduct } from "../server-shared/catalog/normalizeProduct.js";
-import { adminDb } from "./firebase-admin";
+import { adminDb, adminAuth } from "./firebase-admin";
 import { AuthError } from "./auth-server";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import type { Data } from "./contracts";
+import { phoneVerification } from "../server-shared/commerce/phoneVerification.js";
+import { whatsappPhoneVerification } from "../server-shared/commerce/whatsappPhoneVerification.js";
 
 export async function customerAction(
   action: string,
@@ -15,6 +17,16 @@ export async function customerAction(
   token: DecodedIdToken,
 ) {
   const db = adminDb();
+  if (action === "startWhatsAppPhoneVerification")
+    return whatsappPhoneVerification({ db, auth: adminAuth() }).start(
+      token.uid,
+      data.phone,
+    );
+  if (action === "startPhoneVerification")
+    return phoneVerification({ db, auth: adminAuth() }).start(
+      token.uid,
+      data.challenge,
+    );
   if (action === "getReceipt") {
     const id = typeof data.order_id === "string" ? data.order_id.trim() : "";
     if (!id || id.includes("/") || id.length > 80)
@@ -39,6 +51,7 @@ export async function customerAction(
   };
   const loyalty = createRewards({
     db,
+    auth: adminAuth(),
     callable: (handler: any) => handler,
     signedIn,
     owner,
@@ -55,6 +68,7 @@ export async function customerAction(
     );
   if (action === "quoteOrder") return loyalty.quoteOrder(request);
   if (action === "getRewards") return loyalty.getRewards(request);
+  if (action === "getRewardsHistory") return loyalty.getRewardsHistory(request);
   if (action === "applyReferral") return loyalty.applyReferral(request);
   if (action === "submitReview")
     return createReviewSubmitter({ db })(data, { uid: token.uid });
